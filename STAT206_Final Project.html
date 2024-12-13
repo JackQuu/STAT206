@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Xinhao Qu, Peiling Lin, Luhan Tang, Ying Lin">
+
+<title>Automatic Transfer Learning for High-Dimensional Linear Regression</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="STAT206_Final Project_files/libs/clipboard/clipboard.min.js"></script>
+<script src="STAT206_Final Project_files/libs/quarto-html/quarto.js"></script>
+<script src="STAT206_Final Project_files/libs/quarto-html/popper.min.js"></script>
+<script src="STAT206_Final Project_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="STAT206_Final Project_files/libs/quarto-html/anchor.min.js"></script>
+<link href="STAT206_Final Project_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="STAT206_Final Project_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="STAT206_Final Project_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="STAT206_Final Project_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="STAT206_Final Project_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Automatic Transfer Learning for High-Dimensional Linear Regression</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Xinhao Qu, Peiling Lin, Luhan Tang, Ying Lin </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="part-1" class="level1">
+<h1>Part 1</h1>
+<section id="background" class="level2">
+<h2 class="anchored" data-anchor-id="background">Background</h2>
+<p>The <strong>Least Absolute Shrinkage and Selection Operator (LASSO)</strong>, proposed by Tibshirani (1996), is a regression method designed to improve prediction accuracy and interpretability of statistical models.</p>
+<p>In traditional Ordinary Least Squares (OLS) regression, the model often has low bias but suffers from high variance, especially with a large number of predictors. This can result in overfitting and decreased generalization performance. LASSO addresses these issues by applying a constraint on the sum of the absolute values of the regression coefficients, encouraging sparsity in the model.</p>
+</section>
+<section id="recall-least-squares-regression" class="level2">
+<h2 class="anchored" data-anchor-id="recall-least-squares-regression">Recall: Least Squares Regression</h2>
+<p>First and foremost, I want to bring you back to the Least Squares Regression. It is the basis of LASSO Regression.</p>
+<p>Suppose we are given <span class="math inline">\(n\)</span> observations of the form <span class="math inline">\((x_i, y_i)\)</span>, <span class="math inline">\(i = 1, \dots, n\)</span>, where each <span class="math inline">\(x_i \in \mathbb{R}^d\)</span> denotes a feature vector and <span class="math inline">\(y_i \in \mathbb{R}\)</span> an associated response value. Let <span class="math inline">\(X \in \mathbb{R}^{n \times d}\)</span> denote the predictor matrix (whose <span class="math inline">\(i^{th}\)</span> row is <span class="math inline">\(x_i\)</span>) and <span class="math inline">\(Y \in \mathbb{R}^n\)</span> denote the response vector. Recall that the least squares regression coefficients of <span class="math inline">\(Y\)</span> on <span class="math inline">\(X\)</span> are given by solving <span class="math inline">\(\min_{\beta} \|Y - X\beta\|_2^2\)</span>. When <span class="math inline">\(d \leq n\)</span> and <span class="math inline">\(\text{rank}(X) = d\)</span>, this produces the unique solution <span class="math inline">\(\hat{\beta} = (X^\top X)^{-1} X^\top Y\)</span>. The fitted values (i.e., in-sample predictions) are <span class="math inline">\(X\hat{\beta} = X(X^\top X)^{-1} X^\top Y = P_X Y\)</span>, where <span class="math inline">\(P_X = X(X^\top X)^{-1} X^\top\)</span> denotes the projection onto the column space of <span class="math inline">\(X\)</span>.</p>
+<p><span class="math display">\[
+\min_{\beta} \|Y - X\beta\|_2^2.
+\]</span></p>
+<section id="principle" class="level3">
+<h3 class="anchored" data-anchor-id="principle">Principle</h3>
+<p>When <span class="math inline">\(d \leq n\)</span> and <span class="math inline">\(\text{rank}(X) = d\)</span>, this produces the unique solution:</p>
+<p><span class="math display">\[
+\hat{\beta} = (X^\top X)^{-1} X^\top Y.
+\]</span></p>
+<p>The fitted values (i.e., in-sample predictions) are:</p>
+<p><span class="math display">\[
+X\hat{\beta} = X(X^\top X)^{-1} X^\top Y = P_X Y,
+\]</span> where <span class="math inline">\(P_X = X(X^\top X)^{-1} X^\top\)</span> denotes the projection onto the column space of <span class="math inline">\(X\)</span>.</p>
+</section>
+</section>
+<section id="trouble-in-ols-when-in-high-dimensions" class="level2">
+<h2 class="anchored" data-anchor-id="trouble-in-ols-when-in-high-dimensions">Trouble in OLS when in High Dimensions</h2>
+<p>As we just saw, the risk of least squares regression degrades as <span class="math inline">\(d\)</span> grows close to <span class="math inline">\(n\)</span>, the out-of-sample risk actually diverges at <span class="math inline">\(d = n\)</span>.</p>
+<p>Meanwhile, the least squares estimator itself is not even well-defined when <span class="math inline">\(d &gt; n\)</span>, in that the optimization problem <span class="math inline">\(\min_{\beta} \|Y - X\beta\|_2^2.\)</span> does not have a unique solution. In this case, any vector of the form <span class="math display">\[
+\hat{\beta} = (X^\top X)^+ X^\top Y + \eta, \quad \text{where } \eta \in \text{null}(X),
+\]</span></p>
+<p>solves it, where we write <span class="math inline">\(A^+\)</span> to denote the generalized inverse of a matrix <span class="math inline">\(A\)</span>, and <span class="math inline">\(\text{null}(A)\)</span> to denote its null space.</p>
+<p>If all we care about is out-of-sample prediction, then this is not the end of the story for least squares—it turns out that taking <span class="math inline">\(\eta = 0\)</span> in (5), which yields the minimum <span class="math inline">\(\ell_2\)</span> norm least squares solution, can still have interesting predictive properties when <span class="math inline">\(d &gt; n\)</span>.</p>
+</section>
+<section id="lasso" class="level2">
+<h2 class="anchored" data-anchor-id="lasso">LASSO</h2>
+<section id="regularization" class="level3">
+<h3 class="anchored" data-anchor-id="regularization">Regularization</h3>
+<section id="regularization-in-least-squares-setting" class="level4">
+<h4 class="anchored" data-anchor-id="regularization-in-least-squares-setting">Regularization in Least Squares Setting</h4>
+<p>At a high level, it allows for the production of nontrivial coefficient estimates and can often yield better predictions. The effectiveness of regularization depends strongly on the specific characteristics of the prediction problem.</p>
+<p>In the context of least squares regression, traditional approaches to regularization are expressed in two forms:</p>
+<ul>
+<li><p><strong>Constrained form</strong>:<br>
+Minimize <span class="math inline">\(\| Y - X \beta \|_2^2\)</span> subject to <span class="math inline">\(\beta \in C\)</span>.</p></li>
+<li><p><strong>Penalized form</strong>:<br>
+Minimize <span class="math inline">\(\| Y - X \beta \|_2^2 + h(\beta)\)</span>.</p></li>
+</ul>
+<p>Here:</p>
+<ul>
+<li><span class="math inline">\(C\)</span> represents a (typically convex) set.</li>
+<li><span class="math inline">\(h\)</span> is a (typically convex) penalty function.<br>
+</li>
+</ul>
+<p>For instance, <span class="math inline">\(C = \{ \beta : \| \beta \| \leq t \}\)</span> is the sublevel set of a norm <span class="math inline">\(\|\cdot\|\)</span>, and <span class="math inline">\(h(\beta) = \lambda \|\beta\|\)</span> is a nonnegative multiple of the norm.</p>
+<p>The constrained and penalized forms are equivalent under convex duality. Specifically, for any <span class="math inline">\(t \geq 0\)</span>, there exists a value <span class="math inline">\(\lambda \geq 0\)</span> such that the solution <span class="math inline">\(\hat{\beta}\)</span> to the constrained problem also solves the penalized problem, and vice versa.</p>
+</section>
+</section>
+<section id="canonical-regularizers-ell_1" class="level3">
+<h3 class="anchored" data-anchor-id="canonical-regularizers-ell_1">Canonical Regularizers: <span class="math inline">\(\ell_1\)</span></h3>
+<ul>
+<li><p><span class="math inline">\(\ell_1\)</span> norm: <span class="math inline">\(\|\beta\|_1 = \sum_{j=1}^d |\beta_j|\)</span></p></li>
+<li><p><span class="math inline">\(\ell_1\)</span> norm corresponds to <strong>lasso regression</strong>.</p></li>
+</ul>
+</section>
+<section id="formula" class="level3">
+<h3 class="anchored" data-anchor-id="formula">1. Formula</h3>
+</section>
+<section id="lasso-regression-objective-function" class="level3">
+<h3 class="anchored" data-anchor-id="lasso-regression-objective-function">LASSO Regression Objective Function</h3>
+<p>The LASSO (Least Absolute Shrinkage and Selection Operator) regression minimizes the following objective function: <span class="math display">\[
+\min_{\beta} \left\{ \frac{1}{2n} \sum_{i=1}^n \left( y_i - \beta_0 - \sum_{j=1}^p x_{ij} \beta_j \right)^2 + \lambda \sum_{j=1}^p |\beta_j| \right\}
+\]</span> Where:</p>
+<ul>
+<li><p><span class="math inline">\(y_i\)</span>: Response variable for the <span class="math inline">\(i\)</span>-th observation.</p></li>
+<li><p><span class="math inline">\(x_{ij}\)</span>: Predictor variable for the <span class="math inline">\(i\)</span>-th observation and <span class="math inline">\(j\)</span>-th feature.</p></li>
+<li><p><span class="math inline">\(\beta_j\)</span>: Coefficients to be estimated for the <span class="math inline">\(j\)</span>-th predictor.</p></li>
+<li><p><span class="math inline">\(\lambda\)</span>: Regularization parameter controlling the amount of shrinkage.</p></li>
+<li><p><span class="math inline">\(n\)</span>: Number of observations.</p></li>
+<li><p><span class="math inline">\(p\)</span>: Number of predictors.</p></li>
+<li><p><strong>Residual Sum of Squares (RSS)</strong>: The first term measures the goodness of fit of the model to the data.</p></li>
+<li><p><strong>L1 Regularization Term</strong>: The second term penalizes the absolute values of the coefficients, encouraging sparsity.</p></li>
+<li><p><strong>Tuning Parameter (</strong><span class="math inline">\(\lambda\)</span>): Controls the trade-off between model complexity and goodness of fit.</p></li>
+</ul>
+<p>As <span class="math inline">\(\lambda\)</span> increases, more coefficients are shrunk to zero, effectively performing feature selection.</p>
+<p>By penalizing the absolute size of the coefficients, LASSO tends to set some coefficients to exactly zero, effectively selecting a simpler subset of predictors.</p>
+</section>
+<section id="objective-of-lasso-regression" class="level3">
+<h3 class="anchored" data-anchor-id="objective-of-lasso-regression">2. Objective of LASSO Regression</h3>
+<p>The objective of LASSO regression is to determine the coefficients that minimize the following objective function:</p>
+<p>Objective Function = <span class="math inline">\(RSS + L_1\)</span></p>
+</section>
+<section id="shrinking-coefficients-in-lasso-regression" class="level3">
+<h3 class="anchored" data-anchor-id="shrinking-coefficients-in-lasso-regression">3. Shrinking Coefficients in LASSO Regression</h3>
+<p>LASSO regression incorporates the L1 regularization term, which shrinks the coefficients towards zero. When the tuning parameter <span class="math inline">\(\lambda\)</span> is sufficiently large, some coefficients are driven exactly to zero.</p>
+</section>
+<section id="tuning-parameter" class="level3">
+<h3 class="anchored" data-anchor-id="tuning-parameter">4. Tuning Parameter</h3>
+<p>The regularization parameter <span class="math inline">\(\lambda\)</span> plays a crucial role in LASSO regression:</p>
+<ul>
+<li>A larger <span class="math inline">\(\lambda\)</span> increases the amount of regularization, pushing more coefficients towards zero.</li>
+<li>A small <span class="math inline">\(\lambda\)</span> reduces the regularization effect, allowing more variables to retain non-zero coefficients.</li>
+</ul>
+</section>
+<section id="example-in-r" class="level3">
+<h3 class="anchored" data-anchor-id="example-in-r">Example in R</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the necessary libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("rms")</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("glmnet")</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("caret")</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Hmisc</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Hmisc'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    format.pval, units</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet) <span class="co"># For lasso regression</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Matrix</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loaded glmnet 4.1-8</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)  <span class="co"># For additional model utilities</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: ggplot2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: lattice</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the dataset and handle missing values</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> survival<span class="sc">::</span>lung  <span class="co"># Load the dataset directly from the survival package</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(data)  <span class="co"># Remove rows with missing values</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># If a variable has 3 categories, create dummy variables</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Assuming a categorical variable `X` has levels A, B, C</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert it to two dummy variables</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># data$X_B &lt;- ifelse(data$X == "B", 1, 0)</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># data$X_C &lt;- ifelse(data$X == "C", 1, 0)</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert data to a matrix format for glmnet</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Predictors are columns 4 to 10</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(data[, <span class="dv">4</span><span class="sc">:</span><span class="dv">10</span>])</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Response variable is column 3</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(data[, <span class="dv">3</span>])</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit a lasso regression model</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co"># alpha = 1 indicates lasso regression; alpha = 0 would indicate ridge regression</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>lasso <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(X, Y, <span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">family =</span> <span class="st">"binomial"</span>, <span class="at">nlambda =</span> <span class="dv">100</span>)</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="co"># If alpha = 0, glmnet performs ridge regression.</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="co"># `nlambda = 100` ensures 100 iterations to find the optimal lambda.</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(lasso)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:  glmnet(x = X, y = Y, family = "binomial", alpha = 1, nlambda = 100) 
+
+   Df  %Dev   Lambda
+1   0  0.00 0.107100
+2   2  0.87 0.097540
+3   2  2.21 0.088880
+4   2  3.33 0.080980
+5   2  4.26 0.073790
+6   2  5.04 0.067230
+7   2  5.69 0.061260
+8   2  6.24 0.055820
+9   2  6.70 0.050860
+10  3  7.10 0.046340
+11  4  7.50 0.042220
+12  4  7.85 0.038470
+13  4  8.14 0.035060
+14  4  8.38 0.031940
+15  4  8.58 0.029100
+16  4  8.75 0.026520
+17  4  8.90 0.024160
+18  4  9.02 0.022020
+19  4  9.12 0.020060
+20  4  9.20 0.018280
+21  4  9.27 0.016650
+22  4  9.33 0.015170
+23  4  9.38 0.013830
+24  5  9.42 0.012600
+25  5  9.48 0.011480
+26  5  9.52 0.010460
+27  5  9.56 0.009530
+28  7  9.68 0.008684
+29  7  9.79 0.007912
+30  7  9.89 0.007209
+31  7  9.97 0.006569
+32  7 10.04 0.005985
+33  7 10.10 0.005454
+34  7 10.15 0.004969
+35  7 10.19 0.004528
+36  7 10.22 0.004125
+37  7 10.25 0.003759
+38  7 10.27 0.003425
+39  7 10.29 0.003121
+40  7 10.31 0.002843
+41  7 10.32 0.002591
+42  7 10.33 0.002361
+43  7 10.34 0.002151
+44  7 10.35 0.001960
+45  7 10.35 0.001786
+46  7 10.36 0.001627
+47  7 10.36 0.001483
+48  7 10.37 0.001351
+49  7 10.37 0.001231
+50  7 10.37 0.001122
+51  7 10.37 0.001022
+52  7 10.38 0.000931
+53  7 10.38 0.000848
+54  7 10.38 0.000773
+55  7 10.38 0.000704</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the coefficients against the log(lambda)</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso, <span class="at">xvar =</span> <span class="st">"lambda"</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span>(<span class="at">main =</span> <span class="st">"LASSO Path: Coefficients vs Log(Lambda)"</span>, <span class="at">xlab =</span> <span class="st">"Log(Lambda)"</span>, <span class="at">ylab =</span> <span class="st">"Coefficients"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="STAT206_Final-Project_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cross-validation for optimal lambda</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)  <span class="co"># For reproducibility</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>cv_lasso <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X, Y, <span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">family =</span> <span class="st">"binomial"</span>, <span class="at">nfolds =</span> <span class="dv">10</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot cross-validation results</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(cv_lasso)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span>(<span class="at">main =</span> <span class="st">"Cross-Validation for LASSO"</span>, <span class="at">xlab =</span> <span class="st">"Log(Lambda)"</span>, <span class="at">ylab =</span> <span class="st">"Cross-Validation Error"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="STAT206_Final-Project_files/figure-html/unnamed-chunk-1-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optimal lambda</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>optimal_lambda <span class="ot">&lt;-</span> cv_lasso<span class="sc">$</span>lambda.min</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Optimal Lambda: "</span>, optimal_lambda, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Optimal Lambda:  0.03505563 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Coefficients at optimal lambda</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>lasso_coef <span class="ot">&lt;-</span> <span class="fu">coef</span>(cv_lasso, <span class="at">s =</span> <span class="st">"lambda.min"</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(lasso_coef)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>8 x 1 sparse Matrix of class "dgCMatrix"
+                      s1
+(Intercept)  1.390341873
+age          0.003420687
+sex         -0.629636686
+ph.ecog      0.472342775
+ph.karno     .          
+pat.karno   -0.002485985
+meal.cal     .          
+wt.loss      .          </code></pre>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="part-2" class="level1">
+<h1>Part 2</h1>
+<section id="lasso-regression-in-r" class="level2">
+<h2 class="anchored" data-anchor-id="lasso-regression-in-r">Lasso Regression in R</h2>
+<p>In this example, we will use the Boston Housing dataset, a widely recognized dataset for regression analysis. It contains various features that may impact the median value of homes in Boston neighborhoods.</p>
+<section id="dataset-features" class="level3">
+<h3 class="anchored" data-anchor-id="dataset-features">Dataset Features</h3>
+<ul>
+<li><strong>crim:</strong> Per capita crime rate by town.</li>
+<li><strong>zn:</strong> Proportion of residential land zoned for lots larger than 25,000 sq. ft.</li>
+<li><strong>indus:</strong> Proportion of non-retail business acres per town.</li>
+<li><strong>chas:</strong> Charles River dummy variable (1 if the tract borders the river; 0 otherwise).</li>
+<li><strong>nox:</strong> Nitrogen oxide concentration (parts per 10 million).</li>
+<li><strong>rm:</strong> Average number of rooms per dwelling.</li>
+<li><strong>age:</strong> Proportion of owner-occupied units built before 1940.</li>
+<li><strong>dis:</strong> Weighted distances to five Boston employment centers.</li>
+<li><strong>rad:</strong> Index of accessibility to radial highways.</li>
+<li><strong>tax:</strong> Full-value property tax rate per $10,000.</li>
+<li><strong>ptratio:</strong> Pupil-teacher ratio by town.</li>
+<li><strong>b:</strong> Computed as <code>1000(Bk - 0.63)^2</code>, where <code>Bk</code> is the proportion of the Black population by town.</li>
+<li><strong>lstat:</strong> Percentage of the population with lower socioeconomic status.</li>
+<li><strong>medv:</strong> Median value of owner-occupied homes (in $1000s), used as the target variable.</li>
+</ul>
+<p>This dataset provides a comprehensive basis for demonstrating Lasso Regression and exploring the relationships between the predictors and the target variable.</p>
+</section>
+</section>
+<section id="code-implementation" class="level2">
+<h2 class="anchored" data-anchor-id="code-implementation">Code Implementation</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load necessary libraries</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the Boston Housing dataset</span></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(Boston)</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(Boston)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     crim zn indus chas   nox    rm  age    dis rad tax ptratio  black lstat
+1 0.00632 18  2.31    0 0.538 6.575 65.2 4.0900   1 296    15.3 396.90  4.98
+2 0.02731  0  7.07    0 0.469 6.421 78.9 4.9671   2 242    17.8 396.90  9.14
+3 0.02729  0  7.07    0 0.469 7.185 61.1 4.9671   2 242    17.8 392.83  4.03
+4 0.03237  0  2.18    0 0.458 6.998 45.8 6.0622   3 222    18.7 394.63  2.94
+5 0.06905  0  2.18    0 0.458 7.147 54.2 6.0622   3 222    18.7 396.90  5.33
+6 0.02985  0  2.18    0 0.458 6.430 58.7 6.0622   3 222    18.7 394.12  5.21
+  medv
+1 24.0
+2 21.6
+3 34.7
+4 33.4
+5 36.2
+6 28.7</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data preprocessing</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(Boston[, <span class="sc">-</span><span class="dv">14</span>])  <span class="co"># Features</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> Boston<span class="sc">$</span>medv              <span class="co"># Target variable</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Splitting data into training and test sets</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>train_index <span class="ot">&lt;-</span> <span class="fu">createDataPartition</span>(Y, <span class="at">p =</span> <span class="fl">0.8</span>, <span class="at">list =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>train_data <span class="ot">&lt;-</span> X[train_index, ]</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>test_data <span class="ot">&lt;-</span> X[<span class="sc">-</span>train_index, ]</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>train_label <span class="ot">&lt;-</span> Y[train_index]</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>test_label <span class="ot">&lt;-</span> Y[<span class="sc">-</span>train_index]</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Building Lasso Regression model</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>lasso_model <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(train_data, train_label, <span class="at">alpha =</span> <span class="dv">1</span>)</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Predicting on test set</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>predictions <span class="ot">&lt;-</span> <span class="fu">predict</span>(lasso_model, <span class="at">newx =</span> test_data, <span class="at">s =</span> <span class="fl">0.01</span>)</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Evaluating the model (using Root Mean Squared Error)</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>rmse <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">mean</span>((predictions <span class="sc">-</span> test_label)<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Printing the results</span></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Lasso Regression RMSE:"</span>, rmse, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Lasso Regression RMSE: 4.586974 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plotting coefficients</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso_model, <span class="at">xvar =</span> <span class="st">"lambda"</span>, <span class="at">main =</span> <span class="st">"Lasso Coefficients Plot"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="STAT206_Final-Project_files/figure-html/code-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="code-explanation" class="level2">
+<h2 class="anchored" data-anchor-id="code-explanation">Code Explanation</h2>
+<section id="loading-libraries" class="level3">
+<h3 class="anchored" data-anchor-id="loading-libraries">1. Loading Libraries</h3>
+<ul>
+<li><strong><code>glmnet</code></strong>: Provides functions to perform Lasso and Ridge Regression.</li>
+<li><strong><code>caret</code></strong>: Useful for data partitioning and general machine learning tasks.</li>
+</ul>
+</section>
+<section id="loading-the-dataset" class="level3">
+<h3 class="anchored" data-anchor-id="loading-the-dataset">2. Loading the Dataset</h3>
+<ul>
+<li><code>data(Boston)</code>: Loads the Boston Housing dataset.</li>
+<li><code>head(Boston)</code>: Displays the first few rows of the dataset to understand its structure.</li>
+</ul>
+</section>
+<section id="data-preprocessing" class="level3">
+<h3 class="anchored" data-anchor-id="data-preprocessing">3. Data Preprocessing</h3>
+<ul>
+<li><code>X &lt;- as.matrix(Boston[, -14])</code>:
+<ul>
+<li>Extracts all columns except the 14th (<code>medv</code>) as features.</li>
+<li>Converts the features into a matrix format required by <code>glmnet</code>.</li>
+</ul></li>
+<li><code>Y &lt;- Boston$medv</code>:
+<ul>
+<li>Extracts the 14th column (<code>medv</code>) as the target variable, which represents the median value of homes.</li>
+</ul></li>
+</ul>
+</section>
+<section id="splitting-the-dataset" class="level3">
+<h3 class="anchored" data-anchor-id="splitting-the-dataset">4. Splitting the Dataset</h3>
+<ul>
+<li><code>set.seed(123)</code>: Sets a random seed to ensure reproducibility.</li>
+<li><code>createDataPartition(Y, p = 0.8, list = FALSE)</code>:
+<ul>
+<li>Splits the dataset into training (80%) and testing (20%) subsets while maintaining class distribution.</li>
+</ul></li>
+<li><code>train_data</code>, <code>test_data</code>:
+<ul>
+<li>Hold the feature data for training and testing.</li>
+</ul></li>
+<li><code>train_label</code>, <code>test_label</code>:
+<ul>
+<li>Contain the corresponding target labels for training and testing.</li>
+</ul></li>
+</ul>
+</section>
+<section id="building-the-lasso-regression-model" class="level3">
+<h3 class="anchored" data-anchor-id="building-the-lasso-regression-model">5. Building the Lasso Regression Model</h3>
+<ul>
+<li><code>glmnet(train_data, train_label, alpha = 1)</code>:
+<ul>
+<li>Fits a Lasso Regression model to the training data.</li>
+<li><code>alpha = 1</code> specifies that this is Lasso Regression (as opposed to Ridge Regression when <code>alpha = 0</code>).</li>
+<li>Lasso applies regularization, shrinking some coefficients to zero, effectively performing feature selection.</li>
+</ul></li>
+</ul>
+</section>
+<section id="prediction" class="level3">
+<h3 class="anchored" data-anchor-id="prediction">6. Prediction</h3>
+<ul>
+<li><code>predict(lasso_model, newx = test_data, s = 0.01)</code>:
+<ul>
+<li>Predicts the target variable for the test dataset.</li>
+<li>The <code>s</code> parameter controls the shrinkage penalty; smaller values of <code>s</code> correspond to less regularization.</li>
+</ul></li>
+</ul>
+</section>
+<section id="evaluating-the-model" class="level3">
+<h3 class="anchored" data-anchor-id="evaluating-the-model">7. Evaluating the Model</h3>
+<ul>
+<li><code>rmse &lt;- sqrt(mean((predictions - test_label)^2))</code>:
+<ul>
+<li>Computes the Root Mean Squared Error (RMSE), which measures the model’s performance.</li>
+<li>A lower RMSE indicates better model performance.</li>
+</ul></li>
+</ul>
+</section>
+<section id="printing-results" class="level3">
+<h3 class="anchored" data-anchor-id="printing-results">8. Printing Results</h3>
+<ul>
+<li><code>cat("Lasso Regression RMSE:", rmse, "\n")</code>:
+<ul>
+<li>Outputs the computed RMSE value to the console.</li>
+</ul></li>
+</ul>
+</section>
+<section id="plotting-coefficients" class="level3">
+<h3 class="anchored" data-anchor-id="plotting-coefficients">9. Plotting Coefficients</h3>
+<ul>
+<li><code>plot(lasso_model, xvar = "lambda", main = "Lasso Coefficients Plot")</code>:
+<ul>
+<li>Visualizes how the regression coefficients change as a function of the regularization parameter (<code>lambda</code>).</li>
+<li>This plot provides insight into which features are being selected or shrunk to zero by Lasso regularization.</li>
+</ul></li>
+</ul>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>LASSO regression stands out as a vital tool in statistical modeling and machine learning, offering a balance between simplicity and accuracy.</p>
+<p>By promoting sparsity through effective feature selection, LASSO regression helps identify key variables and mitigate overfitting, especially in high-dimensional datasets.</p>
+</section>
+</section>
+<section id="part-3" class="level1">
+<h1>Part 3</h1>
+<section id="transfer-learning" class="level2">
+<h2 class="anchored" data-anchor-id="transfer-learning">Transfer Learning</h2>
+<p>Given a target problem, transfer learning (Torrey and Shavlik, 2010) aims at transferring the knowledge from different but related samples to improve the learning performance of the target problem.</p>
+</section>
+<section id="transfer-learning-in-high-dimensional-linear-regression" class="level2">
+<h2 class="anchored" data-anchor-id="transfer-learning-in-high-dimensional-linear-regression">Transfer Learning in High-dimensional Linear Regression</h2>
+<p>If a sample/study is similar or related to the target problem, we say that, this auxiliary&nbsp; sample/study is informative. A key difficulty in applying transfer learning to high-dimensional linear regression is that informative samples/studies are not always known, which makes transfer learning more challenging to implement.</p>
+<section id="literature-review-s.-li-t.-t.-cai-h.-li-2022" class="level3">
+<h3 class="anchored" data-anchor-id="literature-review-s.-li-t.-t.-cai-h.-li-2022">Literature review : S. Li, T. T. Cai, H. Li (2022)</h3>
+<p>Motivated by the Genotype-Tissue Expression (GTEx) data, which are high-dimensional with relatively small sample sizes, S. Li, T. T. Cai, and H. Li (2022) proposed ‘Trans-Lasso,’ a data-driven procedure designed to address the challenge of identifying informative samples/studies.</p>
+<p>In the simulation, the authors compared five methods (Trans-Lasso, Oracle Trans−Lasso, Lasso, Aggregated Lasso, Ad hoc 1-transfer). Oracle Trans−Lasso assumes that auxiliary studies are known. Lasso is also called non-Trans-Lasso. Aggregated Lasso is similar to Trans-Lasso but excludes the bias-correction step. Similarly, Ad hoc 1-transfer is based on Trans-Lasso but replaces the Q-aggregation step with cross-validation. Among the adaptive transfer learning methods (Trans-Lasso, Lasso, Aggregated Lasso, Ad hoc 1-transfer), Trans-Lasso achieves the smallest prediction errors in almost all experiments.</p>
+<p>The proposed method has several benefits, including information integration that improves data use and learning accuracy. It also has faster coverage compared to Lasso in some situations, and is useful for sparse data tasks, such as identifying important genes from a large set of candidates. However, it has some drawbacks, including the risk of negative transfer, where prior knowledge hinders learning in new tasks due to task dissimilarity. Additionally, the method has strict sparsity and task similarity restrictions and requires heavy computational resources.</p>
+</section>
+</section>
+<section id="automatic-transfer-learning-for-high-dimensional-linear-regression" class="level2">
+<h2 class="anchored" data-anchor-id="automatic-transfer-learning-for-high-dimensional-linear-regression">Automatic Transfer Learning for High-Dimensional Linear Regression</h2>
+<p>Based on Trans-Lasso (S. Li, T. T. Cai, and H. Li, 2022), we propose an extension to the adaptive design, called Automatic Transfer Lasso (ATL), which involves allocating weights to each parameter dimension-wise. ATL customizes the method by assigning different importance to each parameter, potentially improving the model’s performance by more effectively capturing the specific contributions of each dimension.</p>
+<p>In the simulation part, we conduct numerical experiments to compare ATL, Oracle Trans-Lasso, Trans-Lasso, and non-Trans-Lasso. We evaluate these methods in three aspects: positivity for knowledge transfer, consistency and double robustness, and computational efficiency.</p>
+</section>
+<section id="data-generating-process" class="level2">
+<h2 class="anchored" data-anchor-id="data-generating-process">Data generating process</h2>
+<p>Assume single target data set and limited number of large sources. Each row of the data matrix is independent and identically formulated through high-dimensional linear functions: <span class="math display">\[
+y_i^{(k)}={x_i^{(k)}}^{\top} \beta^{(k)}+\epsilon_i^{(k)}, \quad i\in1, \ldots, n_k.
+\]</span> Let <span class="math inline">\(K=1\)</span> for simplicity and <span class="math inline">\(k\in\{0,1\}\)</span> indicates the target and source data. Consider <span class="math inline">\(n_0\ll n_1\)</span>, <span class="math inline">\(\beta^{(k)}\in\mathbb{R}^{p}\)</span> with <span class="math inline">\(p\gg n_1\)</span>. <span class="math inline">\(\epsilon_i^{(k)}\)</span>’s are the random noise. The parameter space is specified as <span class="math display">\[
+\Theta_q(s, h)=\left\{\left(\beta^{(0)}, \delta \right):\|\beta^{(0)}\|_0 \leq s, \left\|\delta\right\|_q \leq h\right\},
+\]</span> where <span class="math inline">\(\delta\equiv\beta^{(0)}-\beta^{(1)}\)</span>. <span class="math inline">\(\left\|\delta\right\|_q\)</span> measures task dissimilarity between the target and the source, which is controlled by <span class="math inline">\(h\geq0\)</span>. <span class="math inline">\(q\in\{0,1\}\)</span> with <span class="math inline">\(\left\|\delta\right\|_0\)</span> depicts the sparsity degree and <span class="math inline">\(\left\|\delta\right\|_1\)</span> describes the cumulative absolute difference between parameters. Integer <span class="math inline">\(s\geq0\)</span> confines the sparsity level of target parameters.</p>
+</section>
+</section>
+<section id="part-4" class="level1">
+<h1>Part 4</h1>
+<section id="atl-algorithm" class="level2">
+<h2 class="anchored" data-anchor-id="atl-algorithm">ATL algorithm</h2>
+<p><strong>Input</strong>: Target data <span class="math inline">\(\{y_i^{(0)}, x_i^{(0)}\}_{i\in1,\ldots,n_0}\)</span> and auxiliary samples <span class="math inline">\(\{y_i^{(1)}, x_i^{(1)}\}_{i\in1,\ldots,n_1}\)</span>; tuning <span class="math inline">\(\lambda_{n_1}, \lambda_{n_0}\)</span>.</p>
+<p><strong>Output</strong>: <span class="math inline">\(\hat{\beta}^{(0)}\)</span>.</p>
+<p><strong>Step 1</strong>: Compute <span class="math display">\[
+\hat{\beta}^{(1)}=\arg \min_{\beta \in \mathbb{R}^p}\left\{\frac{1}{2 n_1} \sum_{i=1}^{n_1} \left(y_i^{(1)}-{x_i^{(1)}}^{\top} \beta\right)^2+\lambda_{n_1} \|\beta\|_1\right\}.
+\]</span> <strong>Step 2</strong>: Compute <span class="math display">\[
+\hat{\delta}=\arg \min_{\delta \in \mathbb{R}^p} \left[\frac{1}{2n_0} \sum_{i=1}^{n_0} \left\{y_i^{(0)}-{x_i^{(0)}}^{\top} \left(\hat{\beta}^{(1)}+\delta\right)\right\}^2 +\lambda_{n_0}\sum_{j=1}^{p}w_j|\delta_j|\right].
+\]</span></p>
+<p><strong>Return</strong>: <span class="math inline">\(\hat{\beta}^{(0)}=\hat{\beta}^{(1)}+\hat{\delta}\)</span>.</p>
+</section>
+<section id="a-simple-implementation" class="level2">
+<h2 class="anchored" data-anchor-id="a-simple-implementation">A simple implementation</h2>
+<p>Specify <span class="math inline">\(w_j=1/|\tilde{\delta_j}|^{\gamma}\)</span>, where <span class="math inline">\(\tilde{\delta}\)</span> is a zero-consistent initial estimator, which is obtained through SCAD oracle estimation, and <span class="math inline">\(\gamma&gt;0\)</span> captures the sensitivity for small variations.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">warn =</span> <span class="sc">-</span><span class="dv">1</span>)</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ncvreg)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MASS)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">'Trans_Lasso.R'</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="co"># tuning</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>p <span class="ot">=</span> <span class="dv">100</span></span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>beta_t <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>,<span class="fu">rep</span>(<span class="dv">0</span>,p<span class="dv">-5</span>))</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>beta_s <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">11</span>,<span class="dv">2</span><span class="sc">:</span><span class="dv">5</span>,<span class="fu">rep</span>(<span class="dv">0</span>,p<span class="dv">-5</span>))</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>q <span class="ot">=</span> <span class="dv">1</span></span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>n_t <span class="ot">=</span> <span class="dv">20</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>n_s <span class="ot">=</span> <span class="dv">100</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>gamma <span class="ot">=</span> <span class="fl">0.05</span></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>sim <span class="ot">=</span> <span class="dv">20</span></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>beta.hat_t.non <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>beta.hat_t <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>beta.hat_t.trans <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>beta.hat_t.trans.sp <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>beta.hat_t.ind <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a>delta.hat_t.adp <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>beta.hat_t.adp <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> sim, <span class="at">ncol =</span> p)</span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>T.trans <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>T.adp <span class="ot">&lt;-</span> <span class="fu">c</span>()</span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (s <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>sim) {</span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a>  <span class="do">#### Target DGP</span></span>
+<span id="cb24-31"><a href="#cb24-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># partial orthogonal</span></span>
+<span id="cb24-32"><a href="#cb24-32" aria-hidden="true" tabindex="-1"></a>  SigmaX <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> p, <span class="at">ncol =</span> p)</span>
+<span id="cb24-33"><a href="#cb24-33" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>p) {</span>
+<span id="cb24-34"><a href="#cb24-34" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (j <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>p) {</span>
+<span id="cb24-35"><a href="#cb24-35" aria-hidden="true" tabindex="-1"></a>      SigmaX[i,j] <span class="ot">&lt;-</span> <span class="fl">0.05</span><span class="sc">^</span>(<span class="fu">abs</span>(i<span class="sc">-</span>j))</span>
+<span id="cb24-36"><a href="#cb24-36" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb24-37"><a href="#cb24-37" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb24-38"><a href="#cb24-38" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>q) {</span>
+<span id="cb24-39"><a href="#cb24-39" aria-hidden="true" tabindex="-1"></a>    SigmaX[k,<span class="sc">-</span>k] <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>,p<span class="dv">-1</span>)</span>
+<span id="cb24-40"><a href="#cb24-40" aria-hidden="true" tabindex="-1"></a>    SigmaX[<span class="sc">-</span>k,k] <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>,p<span class="dv">-1</span>)</span>
+<span id="cb24-41"><a href="#cb24-41" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb24-42"><a href="#cb24-42" aria-hidden="true" tabindex="-1"></a>  X_t <span class="ot">&lt;-</span> <span class="fu">mvrnorm</span>(n_t, <span class="at">mu =</span> <span class="fu">rep</span>(<span class="dv">1</span>,p), <span class="at">Sigma =</span> SigmaX)</span>
+<span id="cb24-43"><a href="#cb24-43" aria-hidden="true" tabindex="-1"></a>  e_t <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n_t)</span>
+<span id="cb24-44"><a href="#cb24-44" aria-hidden="true" tabindex="-1"></a>  Y_t <span class="ot">&lt;-</span> X_t<span class="sc">%*%</span>beta_t <span class="sc">+</span> e_t</span>
+<span id="cb24-45"><a href="#cb24-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-46"><a href="#cb24-46" aria-hidden="true" tabindex="-1"></a>  <span class="do">#### Source DGP</span></span>
+<span id="cb24-47"><a href="#cb24-47" aria-hidden="true" tabindex="-1"></a>  <span class="co"># partial orthogonal</span></span>
+<span id="cb24-48"><a href="#cb24-48" aria-hidden="true" tabindex="-1"></a>  X_s <span class="ot">&lt;-</span> <span class="fu">mvrnorm</span>(n_s, <span class="at">mu =</span> <span class="fu">rep</span>(<span class="dv">1</span>,p), <span class="at">Sigma =</span> SigmaX)</span>
+<span id="cb24-49"><a href="#cb24-49" aria-hidden="true" tabindex="-1"></a>  e_s <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n_s)</span>
+<span id="cb24-50"><a href="#cb24-50" aria-hidden="true" tabindex="-1"></a>  Y_s <span class="ot">&lt;-</span> X_s<span class="sc">%*%</span>beta_s <span class="sc">+</span> e_s</span>
+<span id="cb24-51"><a href="#cb24-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-52"><a href="#cb24-52" aria-hidden="true" tabindex="-1"></a>  <span class="do">#### Methods</span></span>
+<span id="cb24-53"><a href="#cb24-53" aria-hidden="true" tabindex="-1"></a>  <span class="do">### Non-Transfer</span></span>
+<span id="cb24-54"><a href="#cb24-54" aria-hidden="true" tabindex="-1"></a>  lasso.fit_t.non <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_t, Y_t, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>)</span>
+<span id="cb24-55"><a href="#cb24-55" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.non[s,] <span class="ot">&lt;-</span> <span class="fu">coef</span>(lasso.fit_t.non)[<span class="sc">-</span><span class="dv">1</span>,]</span>
+<span id="cb24-56"><a href="#cb24-56" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-57"><a href="#cb24-57" aria-hidden="true" tabindex="-1"></a>  <span class="do">### Oracle Trans-Lasso</span></span>
+<span id="cb24-58"><a href="#cb24-58" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">rbind</span>(X_t, X_s)</span>
+<span id="cb24-59"><a href="#cb24-59" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">c</span>(Y_t, Y_s)</span>
+<span id="cb24-60"><a href="#cb24-60" aria-hidden="true" tabindex="-1"></a>  n.vec <span class="ot">&lt;-</span> <span class="fu">c</span>(n_t, n_s)</span>
+<span id="cb24-61"><a href="#cb24-61" aria-hidden="true" tabindex="-1"></a>  size.A0 <span class="ot">&lt;-</span> <span class="dv">1</span></span>
+<span id="cb24-62"><a href="#cb24-62" aria-hidden="true" tabindex="-1"></a>  beta.hat_t[s,] <span class="ot">&lt;-</span> <span class="fu">las.kA</span>(X, y, <span class="at">A0 =</span> <span class="dv">1</span><span class="sc">:</span>size.A0, <span class="at">n.vec =</span> n.vec, <span class="at">l1=</span>T)<span class="sc">$</span>beta.kA</span>
+<span id="cb24-63"><a href="#cb24-63" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-64"><a href="#cb24-64" aria-hidden="true" tabindex="-1"></a>  <span class="do">### Q-aggregation Trans-Lasso</span></span>
+<span id="cb24-65"><a href="#cb24-65" aria-hidden="true" tabindex="-1"></a>  t0 <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
+<span id="cb24-66"><a href="#cb24-66" aria-hidden="true" tabindex="-1"></a>  prop.re1 <span class="ot">&lt;-</span> <span class="fu">Trans.lasso</span>(X, y, n.vec, <span class="at">I.til =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">l1 =</span> T)</span>
+<span id="cb24-67"><a href="#cb24-67" aria-hidden="true" tabindex="-1"></a>  prop.re2 <span class="ot">&lt;-</span> <span class="fu">Trans.lasso</span>(X, y, n.vec, <span class="at">I.til =</span> <span class="dv">6</span><span class="sc">:</span>n.vec[<span class="dv">1</span>], <span class="at">l1=</span>T)</span>
+<span id="cb24-68"><a href="#cb24-68" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.trans[s,] <span class="ot">&lt;-</span> (prop.re1<span class="sc">$</span>beta.hat <span class="sc">+</span> prop.re2<span class="sc">$</span>beta.hat) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb24-69"><a href="#cb24-69" aria-hidden="true" tabindex="-1"></a>  T.trans[s] <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()<span class="sc">-</span>t0</span>
+<span id="cb24-70"><a href="#cb24-70" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-71"><a href="#cb24-71" aria-hidden="true" tabindex="-1"></a>  <span class="do">### Q-aggregation with a different R.hat</span></span>
+<span id="cb24-72"><a href="#cb24-72" aria-hidden="true" tabindex="-1"></a>  prop.sp.re1 <span class="ot">&lt;-</span> <span class="fu">Trans.lasso.sp</span>(X, y, n.vec, <span class="at">I.til =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">15</span>, <span class="at">l1 =</span> T)</span>
+<span id="cb24-73"><a href="#cb24-73" aria-hidden="true" tabindex="-1"></a>  prop.sp.re2 <span class="ot">&lt;-</span> <span class="fu">Trans.lasso.sp</span>(X, y, n.vec, <span class="at">I.til =</span> <span class="dv">16</span><span class="sc">:</span>n.vec[<span class="dv">1</span>], <span class="at">l1=</span>T)</span>
+<span id="cb24-74"><a href="#cb24-74" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.trans.sp[s,] <span class="ot">&lt;-</span> (prop.sp.re1<span class="sc">$</span>beta.sp <span class="sc">+</span> prop.sp.re2<span class="sc">$</span>beta.sp) <span class="sc">/</span> <span class="dv">2</span></span>
+<span id="cb24-75"><a href="#cb24-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-76"><a href="#cb24-76" aria-hidden="true" tabindex="-1"></a>  <span class="do">### ATL</span></span>
+<span id="cb24-77"><a href="#cb24-77" aria-hidden="true" tabindex="-1"></a>  <span class="co"># initial SCAD estimator</span></span>
+<span id="cb24-78"><a href="#cb24-78" aria-hidden="true" tabindex="-1"></a>  beta.tilde_t <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">cv.ncvreg</span>(X_t, Y_t, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>, <span class="at">penalty=</span><span class="fu">c</span>(<span class="st">"SCAD"</span>)))[<span class="sc">-</span><span class="dv">1</span>]</span>
+<span id="cb24-79"><a href="#cb24-79" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-80"><a href="#cb24-80" aria-hidden="true" tabindex="-1"></a>  fold <span class="ot">=</span> <span class="dv">3</span></span>
+<span id="cb24-81"><a href="#cb24-81" aria-hidden="true" tabindex="-1"></a>  delta.hat_t.adp.fold <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> fold, <span class="at">ncol =</span> p)</span>
+<span id="cb24-82"><a href="#cb24-82" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.ind.fold <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> fold, <span class="at">ncol =</span> p)</span>
+<span id="cb24-83"><a href="#cb24-83" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.adp.fold <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="cn">NA</span>, <span class="at">nrow =</span> fold, <span class="at">ncol =</span> p)</span>
+<span id="cb24-84"><a href="#cb24-84" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (k <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>fold) {</span>
+<span id="cb24-85"><a href="#cb24-85" aria-hidden="true" tabindex="-1"></a>    selector <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">1</span><span class="sc">:</span>fold, <span class="at">length.out =</span> n_s)</span>
+<span id="cb24-86"><a href="#cb24-86" aria-hidden="true" tabindex="-1"></a>    X_s.train <span class="ot">&lt;-</span> X_s[selector<span class="sc">==</span>k,]</span>
+<span id="cb24-87"><a href="#cb24-87" aria-hidden="true" tabindex="-1"></a>    X_s.test <span class="ot">&lt;-</span> X_s[selector<span class="sc">!=</span>k,]</span>
+<span id="cb24-88"><a href="#cb24-88" aria-hidden="true" tabindex="-1"></a>    Y_s.train <span class="ot">&lt;-</span> Y_s[selector<span class="sc">==</span>k]</span>
+<span id="cb24-89"><a href="#cb24-89" aria-hidden="true" tabindex="-1"></a>    Y_s.test <span class="ot">&lt;-</span> Y_s[selector<span class="sc">!=</span>k]</span>
+<span id="cb24-90"><a href="#cb24-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-91"><a href="#cb24-91" aria-hidden="true" tabindex="-1"></a>    n_s.train <span class="ot">&lt;-</span> <span class="fu">length</span>(Y_s.train)</span>
+<span id="cb24-92"><a href="#cb24-92" aria-hidden="true" tabindex="-1"></a>    n_s.test <span class="ot">&lt;-</span> <span class="fu">length</span>(Y_s.test)</span>
+<span id="cb24-93"><a href="#cb24-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-94"><a href="#cb24-94" aria-hidden="true" tabindex="-1"></a>    beta.tilde_s.train <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">cv.ncvreg</span>(X_s.train, Y_s.train, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>, <span class="at">penalty=</span><span class="fu">c</span>(<span class="st">"SCAD"</span>)))[<span class="sc">-</span><span class="dv">1</span>]</span>
+<span id="cb24-95"><a href="#cb24-95" aria-hidden="true" tabindex="-1"></a>    beta.tilde_s.test <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">cv.ncvreg</span>(X_s.test, Y_s.test, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>, <span class="at">penalty=</span><span class="fu">c</span>(<span class="st">"SCAD"</span>)))[<span class="sc">-</span><span class="dv">1</span>]</span>
+<span id="cb24-96"><a href="#cb24-96" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-97"><a href="#cb24-97" aria-hidden="true" tabindex="-1"></a>    <span class="co"># simultaneous estimation</span></span>
+<span id="cb24-98"><a href="#cb24-98" aria-hidden="true" tabindex="-1"></a>    lasso.fit_s.train <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_s.train, Y_s.train, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>,</span>
+<span id="cb24-99"><a href="#cb24-99" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">penalty.factor =</span> <span class="dv">1</span><span class="sc">/</span>beta.tilde_s.train)</span>
+<span id="cb24-100"><a href="#cb24-100" aria-hidden="true" tabindex="-1"></a>    beta.hat_s.train <span class="ot">&lt;-</span> <span class="fu">coef</span>(lasso.fit_s.train)[<span class="sc">-</span><span class="dv">1</span>,]</span>
+<span id="cb24-101"><a href="#cb24-101" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-102"><a href="#cb24-102" aria-hidden="true" tabindex="-1"></a>    <span class="co"># hard threshold adaptive weighting</span></span>
+<span id="cb24-103"><a href="#cb24-103" aria-hidden="true" tabindex="-1"></a>    indicator <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">rep</span>(<span class="fl">0.01</span>,<span class="dv">1</span>),<span class="fu">rep</span>(<span class="dv">1</span>,p<span class="dv">-1</span>))</span>
+<span id="cb24-104"><a href="#cb24-104" aria-hidden="true" tabindex="-1"></a>    lasso.fit_t.ind <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_t, Y_t <span class="sc">-</span> X_t<span class="sc">%*%</span>beta.hat_s.train, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>,</span>
+<span id="cb24-105"><a href="#cb24-105" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">penalty.factor =</span> indicator)</span>
+<span id="cb24-106"><a href="#cb24-106" aria-hidden="true" tabindex="-1"></a>    delta.hat.ind <span class="ot">&lt;-</span> <span class="fu">coef</span>(lasso.fit_t.ind)[<span class="sc">-</span><span class="dv">1</span>,]</span>
+<span id="cb24-107"><a href="#cb24-107" aria-hidden="true" tabindex="-1"></a>    beta.hat_t.ind.fold[k,] <span class="ot">&lt;-</span> beta.hat_s.train <span class="sc">+</span> delta.hat.ind</span>
+<span id="cb24-108"><a href="#cb24-108" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-109"><a href="#cb24-109" aria-hidden="true" tabindex="-1"></a>    <span class="co"># smooth adaptive weighting</span></span>
+<span id="cb24-110"><a href="#cb24-110" aria-hidden="true" tabindex="-1"></a>    t1 <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()</span>
+<span id="cb24-111"><a href="#cb24-111" aria-hidden="true" tabindex="-1"></a>    weighting <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">/</span> <span class="fu">abs</span>(beta.tilde_t<span class="sc">-</span>beta.tilde_s.test))<span class="sc">^</span>gamma</span>
+<span id="cb24-112"><a href="#cb24-112" aria-hidden="true" tabindex="-1"></a>    lasso.fit_t.adp <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X_t, Y_t <span class="sc">-</span> X_t<span class="sc">%*%</span>beta.hat_s.train, <span class="at">intercept =</span> <span class="cn">FALSE</span>, <span class="at">nfolds =</span> <span class="dv">5</span>,</span>
+<span id="cb24-113"><a href="#cb24-113" aria-hidden="true" tabindex="-1"></a>                                 <span class="at">penalty.factor =</span> weighting)</span>
+<span id="cb24-114"><a href="#cb24-114" aria-hidden="true" tabindex="-1"></a>    delta.hat_t.adp.fold[k,] <span class="ot">&lt;-</span> delta.hat.adp <span class="ot">&lt;-</span> <span class="fu">coef</span>(lasso.fit_t.adp)[<span class="sc">-</span><span class="dv">1</span>,]</span>
+<span id="cb24-115"><a href="#cb24-115" aria-hidden="true" tabindex="-1"></a>    beta.hat_t.adp.fold[k,] <span class="ot">&lt;-</span> beta.hat_s.train <span class="sc">+</span> delta.hat.adp</span>
+<span id="cb24-116"><a href="#cb24-116" aria-hidden="true" tabindex="-1"></a>    T.adp[s] <span class="ot">&lt;-</span> <span class="fu">Sys.time</span>()<span class="sc">-</span>t1</span>
+<span id="cb24-117"><a href="#cb24-117" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb24-118"><a href="#cb24-118" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-119"><a href="#cb24-119" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.ind[s,] <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(beta.hat_t.ind.fold)</span>
+<span id="cb24-120"><a href="#cb24-120" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-121"><a href="#cb24-121" aria-hidden="true" tabindex="-1"></a>  delta.hat_t.adp[s,] <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(delta.hat_t.adp.fold)</span>
+<span id="cb24-122"><a href="#cb24-122" aria-hidden="true" tabindex="-1"></a>  beta.hat_t.adp[s,] <span class="ot">&lt;-</span> <span class="fu">colMeans</span>(beta.hat_t.adp.fold)</span>
+<span id="cb24-123"><a href="#cb24-123" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb24-124"><a href="#cb24-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-125"><a href="#cb24-125" aria-hidden="true" tabindex="-1"></a>maxdiff.hat <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">max</span>(<span class="fu">colMeans</span>(delta.hat_t.adp)[<span class="dv">1</span><span class="sc">:</span>q]), <span class="fu">max</span>(<span class="fu">colMeans</span>(delta.hat_t.adp)[<span class="sc">-</span><span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span>q)]))</span>
+<span id="cb24-126"><a href="#cb24-126" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-127"><a href="#cb24-127" aria-hidden="true" tabindex="-1"></a>RMSE_nontrans <span class="ot">&lt;-</span> <span class="fu">error.hat</span>(beta_t, beta.hat_t.non)[[<span class="dv">1</span>]]</span>
+<span id="cb24-128"><a href="#cb24-128" aria-hidden="true" tabindex="-1"></a>RMSE_naivetrans <span class="ot">&lt;-</span> <span class="fu">error.hat</span>(beta_t, beta.hat_t)[[<span class="dv">1</span>]]</span>
+<span id="cb24-129"><a href="#cb24-129" aria-hidden="true" tabindex="-1"></a>RMSE_Qtrans <span class="ot">&lt;-</span> <span class="fu">error.hat</span>(beta_t, beta.hat_t.trans)[[<span class="dv">1</span>]]</span>
+<span id="cb24-130"><a href="#cb24-130" aria-hidden="true" tabindex="-1"></a>RMSE_Qtrans.sp <span class="ot">&lt;-</span> <span class="fu">error.hat</span>(beta_t, beta.hat_t.trans.sp)[[<span class="dv">1</span>]]</span>
+<span id="cb24-131"><a href="#cb24-131" aria-hidden="true" tabindex="-1"></a>RMSE_indicator <span class="ot">&lt;-</span> <span class="fu">error.hat</span>(beta_t, beta.hat_t.ind)[[<span class="dv">1</span>]]</span>
+<span id="cb24-132"><a href="#cb24-132" aria-hidden="true" tabindex="-1"></a>RMSE_adaptive <span class="ot">&lt;-</span> <span class="fu">error.hat</span>(beta_t, beta.hat_t.adp)[[<span class="dv">1</span>]]</span>
+<span id="cb24-133"><a href="#cb24-133" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-134"><a href="#cb24-134" aria-hidden="true" tabindex="-1"></a><span class="fu">boxplot</span>(RMSE_nontrans, RMSE_naivetrans, RMSE_Qtrans.sp,</span>
+<span id="cb24-135"><a href="#cb24-135" aria-hidden="true" tabindex="-1"></a>        RMSE_indicator, RMSE_adaptive,</span>
+<span id="cb24-136"><a href="#cb24-136" aria-hidden="true" tabindex="-1"></a>        <span class="at">names =</span> <span class="fu">c</span>(<span class="st">'Non-Trans'</span>,</span>
+<span id="cb24-137"><a href="#cb24-137" aria-hidden="true" tabindex="-1"></a>                  <span class="st">'Oracle Trans-Lasso'</span>, <span class="st">'Trans-Lasso'</span>,</span>
+<span id="cb24-138"><a href="#cb24-138" aria-hidden="true" tabindex="-1"></a>                  <span class="st">'H-ATL'</span>, <span class="st">'S-ATL'</span>),</span>
+<span id="cb24-139"><a href="#cb24-139" aria-hidden="true" tabindex="-1"></a>        <span class="at">ylab =</span> <span class="st">'RMSE'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="STAT206_Final-Project_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co"># RMSE</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cbind</span>(<span class="fu">c</span>(<span class="st">'Non-Trans'</span>,<span class="st">'Oracle Trans-Lasso'</span>,<span class="st">'Trans-Lasso'</span>,<span class="st">'Trans-Lasso.sp'</span>,<span class="st">'H-ATL'</span>,<span class="st">'S-ATL'</span>),</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>      <span class="fu">c</span>(<span class="fu">rbind</span>(<span class="fu">mean</span>(RMSE_nontrans), <span class="fu">mean</span>(RMSE_naivetrans), <span class="fu">mean</span>(RMSE_Qtrans, <span class="at">na.rm=</span>T), <span class="fu">mean</span>(RMSE_Qtrans.sp, <span class="at">na.rm=</span>T), <span class="fu">mean</span>(RMSE_indicator), <span class="fu">mean</span>(RMSE_adaptive))))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1]                 [,2]                
+[1,] "Non-Trans"          "0.296800822896957" 
+[2,] "Oracle Trans-Lasso" "0.507042214977862" 
+[3,] "Trans-Lasso"        "0.428012773918103" 
+[4,] "Trans-Lasso.sp"     "0.465754744463064" 
+[5,] "H-ATL"              "0.242180138251491" 
+[6,] "S-ATL"              "0.0910745887682081"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co"># computation time</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cbind</span>(<span class="fu">c</span>(<span class="st">'Trans-Lasso'</span>,<span class="st">'S-ATL'</span>),<span class="fu">rbind</span>(<span class="fu">mean</span>(T.trans), <span class="fu">mean</span>(T.adp)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     [,1]          [,2]                 
+[1,] "Trans-Lasso" "0.02060866355896"   
+[2,] "S-ATL"       "0.00864486694335937"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ATL detection consistency</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cbind</span>(<span class="fu">c</span>(<span class="st">'Non-similar part'</span>,<span class="st">'Similar part'</span>), maxdiff.hat)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                        maxdiff.hat        
+[1,] "Non-similar part" "-10.10189414883"  
+[2,] "Similar part"     "0.975778868473675"</code></pre>
+</div>
+</div>
+</section>
+<section id="numerical-experiment" class="level2">
+<h2 class="anchored" data-anchor-id="numerical-experiment">Numerical experiment</h2>
+<section id="positivity-for-knowledge-transfer" class="level3">
+<h3 class="anchored" data-anchor-id="positivity-for-knowledge-transfer">Positivity for knowledge transfer</h3>
+<p>By restricts <span class="math inline">\(h\)</span>, we formulate an ideal case for knowledge transfer. Sample sizes <span class="math inline">\((n_0,n_1) \in \{(20,100),(25,200),(30,600),(35,2000),(40,8000)\}\)</span>. Calibrate target and source with the same sparsity structure of degree <span class="math inline">\(s/p\in\{0.01,0.025,0.05,0.1,0.25\}\)</span>, where <span class="math inline">\(p\in\{20,50,100,200,500\}\)</span>, combined with <span class="math inline">\(h=0.01\)</span> under <span class="math inline">\(\|\delta\|_0=1\)</span> in the specified parameter space. For tuning, set <span class="math inline">\(\gamma_0=0.05,\gamma_1=0.5\)</span> and <span class="math inline">\(\lambda\)</span>’s are chosen through cross-validation.</p>
+<p>Let <span class="math inline">\(w_j= 1/\kappa+I\{j\in \mathcal{A}\}\)</span>, with a shrinking factor of <span class="math inline">\(1/\kappa\)</span> in upper bound, the follwing figure compares ATL with Oracle Trans-Lasso and Trans-Lasso on Root Mean Square Error (RMSE) ratio over non-transferred Lasso estimation under 100 simulations, illustrating effective knowledge transfer by all non-negative rates, different levels of sparsity dependence with Oracle Trans-Lasso and Trans-Lasso being the sensitive ones.</p>
+<p>Let <span class="math inline">\(w_j=1/|\tilde{\delta_j}|^{\gamma}\)</span>, ATL with smooth weighting is also contained. By typically comparing with ATL that has known weights, smooth weighting achieves parallelled performance in practice.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="Rplot-positivity.png" class="img-fluid figure-img"></p>
+<figcaption>Positive Rate for Oracle Trans-Lasso, Trans-Lasso, ATL and ATL with Smooth Weighting under <span class="math inline">\(h=0.01\)</span> and Various Sparsity Level</figcaption>
+</figure>
+</div>
+</section>
+<section id="consistency-and-double-robustness" class="level3">
+<h3 class="anchored" data-anchor-id="consistency-and-double-robustness">Consistency and double robustness</h3>
+<p>Relaxing <span class="math inline">\(\|\delta\|_1\leq h\in\{0.01,0.1,1,10,100\}\)</span> with <span class="math inline">\(\|\delta\|_0=1\)</span> still, we calibrate <span class="math inline">\(w_j\)</span> in ATL, which obtains almost idential rate with Oracle Trans-Lasso according to the first row of the following figure, demonstrating its nearly optimal limiting performance for small <span class="math inline">\(h\)</span>. From the second row in the following figure, Oracle Trans-Lasso and Trans-Lasso, show a clear shift from below to exceed the red dashed boundary of Non-Trans Lasso when <span class="math inline">\(h\)</span> increases, behaving again sensitive for negative sources. ATL with smooth weighting again shows its comparable performance with ATL under known weights.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="Rplot-robustness.png" class="img-fluid figure-img"></p>
+<figcaption>Estimation Error for Non-Trans Lasso, Oracle Trans-Lasso, Trans-Lasso, ATL and ATL with Smooth Weighting under Fixed <span class="math inline">\(s/p=0.01\)</span> but Different Dissimilarity Level</figcaption>
+</figure>
+</div>
+</section>
+<section id="computational-efficiency" class="level3">
+<h3 class="anchored" data-anchor-id="computational-efficiency">Computational efficiency</h3>
+<p>Through embedding transferability within the learning process, ATL shrinks the computation burden compared with Trans-Lasso and appears insensitive for enlarging <span class="math inline">\(n_0,n_K\)</span> and <span class="math inline">\(p\)</span>.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="Rplot-efficiency.png" class="img-fluid figure-img"></p>
+<figcaption>Computation Time for Trans-Lasso and ATL under Various Dimensions</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="reference-material" class="level2">
+<h2 class="anchored" data-anchor-id="reference-material">Reference Material</h2>
+<blockquote class="blockquote">
+<p>Tibshirani, R. (1996). Regression Shrinkage and Selection via the Lasso. <em>Journal of the Royal Statistical Society: Series B (Methodological)</em>, 58(1), 267–288. <a href="https://www.jstor.org/stable/2346178">link</a></p>
+</blockquote>
+<blockquote class="blockquote">
+<p>Li, S., Cai, T. T., &amp; Li, H. (2022). Transfer Learning for High-Dimensional Linear Regression: Prediction, Estimation and Minimax Optimality. <em>Journal of the Royal Statistical Society Series B: Statistical Methodology</em>, 84(1), 149–173. <a href="https://doi.org/10.1111/rssb.12479">link</a></p>
+</blockquote>
+<p>For further exploration, the following references provide comprehensive insights into the theory and applications of LASSO regression:</p>
+<ol type="1">
+<li><strong>Lecture Notes by Tibshirani</strong>: Available at <a href="https://www.stat.berkeley.edu/~ryantibs/statlearn-s23/lectures/lasso.pdf">LASSO Regression Notes</a>.</li>
+<li><strong>University of Chicago Materials</strong>: Accessible at <a href="https://www.stat.uchicago.edu/~yibi/teaching/stat224/L18.pdf">Stat 224 Lecture 18</a></li>
+</ol>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
