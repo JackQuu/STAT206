@@ -1,0 +1,154 @@
+---
+title: "STAT206-Lasso-Intro2"
+author: "Ying Lin"
+format: html
+editor: visual
+---
+
+## Lasso Regression in R
+
+In this example, we will use the Boston Housing dataset, a widely recognized dataset for regression analysis. It contains various features that may impact the median value of homes in Boston neighborhoods.
+
+### Dataset Features
+
+-   **crim:** Per capita crime rate by town.
+-   **zn:** Proportion of residential land zoned for lots larger than 25,000 sq. ft.
+-   **indus:** Proportion of non-retail business acres per town.
+-   **chas:** Charles River dummy variable (1 if the tract borders the river; 0 otherwise).
+-   **nox:** Nitrogen oxide concentration (parts per 10 million).
+-   **rm:** Average number of rooms per dwelling.
+-   **age:** Proportion of owner-occupied units built before 1940.
+-   **dis:** Weighted distances to five Boston employment centers.
+-   **rad:** Index of accessibility to radial highways.
+-   **tax:** Full-value property tax rate per \$10,000.
+-   **ptratio:** Pupil-teacher ratio by town.
+-   **b:** Computed as `1000(Bk - 0.63)^2`, where `Bk` is the proportion of the Black population by town.
+-   **lstat:** Percentage of the population with lower socioeconomic status.
+-   **medv:** Median value of owner-occupied homes (in \$1000s), used as the target variable.
+
+This dataset provides a comprehensive basis for demonstrating Lasso Regression and exploring the relationships between the predictors and the target variable.
+
+## Code Implementation
+
+```{r code}
+# Load necessary libraries
+library(glmnet)
+library(caret)
+library(MASS)
+
+# Load the Boston Housing dataset
+data(Boston)
+head(Boston)
+
+# Data preprocessing
+X <- as.matrix(Boston[, -14])  # Features
+Y <- Boston$medv              # Target variable
+
+# Splitting data into training and test sets
+set.seed(123)
+train_index <- createDataPartition(Y, p = 0.8, list = FALSE)
+train_data <- X[train_index, ]
+test_data <- X[-train_index, ]
+train_label <- Y[train_index]
+test_label <- Y[-train_index]
+
+# Building Lasso Regression model
+lasso_model <- glmnet(train_data, train_label, alpha = 1)
+
+# Predicting on test set
+predictions <- predict(lasso_model, newx = test_data, s = 0.01)
+
+# Evaluating the model (using Root Mean Squared Error)
+rmse <- sqrt(mean((predictions - test_label)^2))
+
+# Printing the results
+cat("Lasso Regression RMSE:", rmse, "\n")
+
+# Plotting coefficients
+plot(lasso_model, xvar = "lambda", main = "Lasso Coefficients Plot")
+
+```
+
+## Code Explanation
+
+### 1. Loading Libraries
+
+-   **`glmnet`**: Provides functions to perform Lasso and Ridge Regression.
+-   **`caret`**: Useful for data partitioning and general machine learning tasks.
+
+### 2. Loading the Dataset
+
+-   `data(Boston)`: Loads the Boston Housing dataset.
+-   `head(Boston)`: Displays the first few rows of the dataset to understand its structure.
+
+### 3. Data Preprocessing
+
+-   `X <- as.matrix(Boston[, -14])`:
+    -   Extracts all columns except the 14th (`medv`) as features.
+    -   Converts the features into a matrix format required by `glmnet`.
+-   `Y <- Boston$medv`:
+    -   Extracts the 14th column (`medv`) as the target variable, which represents the median value of homes.
+
+### 4. Splitting the Dataset
+
+-   `set.seed(123)`: Sets a random seed to ensure reproducibility.
+-   `createDataPartition(Y, p = 0.8, list = FALSE)`:
+    -   Splits the dataset into training (80%) and testing (20%) subsets while maintaining class distribution.
+-   `train_data`, `test_data`:
+    -   Hold the feature data for training and testing.
+-   `train_label`, `test_label`:
+    -   Contain the corresponding target labels for training and testing.
+
+### 5. Building the Lasso Regression Model
+
+-   `glmnet(train_data, train_label, alpha = 1)`:
+    -   Fits a Lasso Regression model to the training data.
+    -   `alpha = 1` specifies that this is Lasso Regression (as opposed to Ridge Regression when `alpha = 0`).
+    -   Lasso applies regularization, shrinking some coefficients to zero, effectively performing feature selection.
+
+### 6. Prediction
+
+-   `predict(lasso_model, newx = test_data, s = 0.01)`:
+    -   Predicts the target variable for the test dataset.
+    -   The `s` parameter controls the shrinkage penalty; smaller values of `s` correspond to less regularization.
+
+### 7. Evaluating the Model
+
+-   `rmse <- sqrt(mean((predictions - test_label)^2))`:
+    -   Computes the Root Mean Squared Error (RMSE), which measures the model's performance.
+    -   A lower RMSE indicates better model performance.
+
+### 8. Printing Results
+
+-   `cat("Lasso Regression RMSE:", rmse, "\n")`:
+    -   Outputs the computed RMSE value to the console.
+
+### 9. Plotting Coefficients
+
+-   `plot(lasso_model, xvar = "lambda", main = "Lasso Coefficients Plot")`:
+    -   Visualizes how the regression coefficients change as a function of the regularization parameter (`lambda`).
+    -   This plot provides insight into which features are being selected or shrunk to zero by Lasso regularization.
+
+## Difference Between Ridge Regression and Lasso Regression
+
+| **Feature** | **Ridge Regression** | **Lasso Regression** |
+|----|----|----|
+| **Penalty Term** | The penalty term is the sum of the squares of the coefficients (L2 regularization). | The penalty term is the sum of the absolute values of the coefficients (L1 regularization). |
+| **Effect on Coefficients** | Shrinks the coefficients but doesn’t set any coefficient to zero. | Can shrink some coefficients to zero, effectively performing feature selection. |
+| **Overfitting** | Helps to reduce overfitting by shrinking large coefficients. | Helps to reduce overfitting by shrinking and selecting features with less importance. |
+| **Feature Suitability** | Works well when there are a large number of features. | Works well when there are a small number of features. |
+| **Thresholding** | Performs "soft thresholding" of coefficients. | Performs "hard thresholding" of coefficients. |
+
+### Summary
+
+In summary, Ridge regression acts as a shrinkage model, while Lasso regression functions as a feature selection model.
+
+-Ridge regression addresses the bias-variance trade-off by reducing the magnitude of coefficients but retains all features in the model.
+
+-Lasso regression, on the other hand, achieves a similar balance by shrinking some coefficients to zero, thereby selecting only the most important features.
+
+## Conclusion
+
+LASSO regression stands out as a vital tool in statistical modeling and machine learning, offering a balance between simplicity and accuracy.
+
+By promoting sparsity through effective feature selection, LASSO regression helps identify key variables and mitigate overfitting, especially in high-dimensional datasets.
