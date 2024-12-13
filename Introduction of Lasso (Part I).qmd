@@ -1,0 +1,271 @@
+---
+title: "Introduction of Lasso (Part I)"
+author: "Luhan Tang"
+format: html
+editor: visual
+---
+
+## 
+
+### Final Project
+
+**Author**: Luhan Tang **Course**: STAT206
+
+# Background
+
+The **Least Absolute Shrinkage and Selection Operator (LASSO)**, proposed by Tibshirani (1996), is a regression method designed to improve prediction accuracy and interpretability of statistical models.
+
+In traditional Ordinary Least Squares (OLS) regression, the model often has low bias but suffers from high variance, especially with a large number of predictors. This can result in overfitting and decreased generalization performance. LASSO addresses these issues by applying a constraint on the sum of the absolute values of the regression coefficients, encouraging sparsity in the model.
+
+# Recall: Least Squares Regression
+
+First and foremost, I want to bring you back to the Least Squares Regression. It is the basis of LASSO Regression.
+
+Suppose we are given $n$ observations of the form $(x_i, y_i)$, $i = 1, \dots, n$, where each $x_i \in \mathbb{R}^d$ denotes a feature vector and $y_i \in \mathbb{R}$ an associated response value. Let $X \in \mathbb{R}^{n \times d}$ denote the predictor matrix (whose $i^{th}$ row is $x_i$) and $Y \in \mathbb{R}^n$ denote the response vector. Recall that the least squares regression coefficients of $Y$ on $X$ are given by solving $\min_{\beta} \|Y - X\beta\|_2^2$. When $d \leq n$ and $\text{rank}(X) = d$, this produces the unique solution $\hat{\beta} = (X^\top X)^{-1} X^\top Y$. The fitted values (i.e., in-sample predictions) are $X\hat{\beta} = X(X^\top X)^{-1} X^\top Y = P_X Y$, where $P_X = X(X^\top X)^{-1} X^\top$ denotes the projection onto the column space of $X$.
+
+$$
+\min_{\beta} \|Y - X\beta\|_2^2.
+$$
+
+## Principle
+
+When $d \leq n$ and $\text{rank}(X) = d$, this produces the unique solution:
+
+$$
+\hat{\beta} = (X^\top X)^{-1} X^\top Y.
+$$
+
+The fitted values (i.e., in-sample predictions) are:
+
+$$
+X\hat{\beta} = X(X^\top X)^{-1} X^\top Y = P_X Y,
+$$ where $P_X = X(X^\top X)^{-1} X^\top$ denotes the projection onto the column space of $X$.
+
+## Trouble in OLS when in High Dimensions
+
+As we just saw, the risk of least squares regression degrades as $d$ grows close to $n$, the out-of-sample risk actually diverges at $d = n$.
+
+Meanwhile, the least squares estimator itself is not even well-defined when $d > n$, in that the optimization problem $\min_{\beta} \|Y - X\beta\|_2^2.$ does not have a unique solution. In this case, any vector of the form $$
+\hat{\beta} = (X^\top X)^+ X^\top Y + \eta, \quad \text{where } \eta \in \text{null}(X),
+$$
+
+solves it, where we write $A^+$ to denote the generalized inverse of a matrix $A$, and $\text{null}(A)$ to denote its null space.
+
+If all we care about is out-of-sample prediction, then this is not the end of the story for least squares—it turns out that taking $\eta = 0$ in (5), which yields the minimum $\ell_2$ norm least squares solution, can still have interesting predictive properties when $d > n$.
+
+But if we additionally care about the estimated coefficients themselves, then it really is the end of the road for least squares. This is because, for any $\hat{\beta}$ of the form (5) with $\hat{\beta}_j > 0$ for some component $j$, we can always find another $\hat{\beta}$ of the form (5) with $\hat{\beta}_j < 0$. So we cannot even consistently interpret the sign of any estimated coefficient (let alone its magnitude).
+
+## LASSO
+
+Lasso regression, also known as Least Absolute Shrinkage and Selection Operator regression, is a regularization technique designed to enhance the accuracy of predictive models. It achieves this by incorporating shrinkage, a process in which coefficient estimates are reduced toward a central point, such as the mean. This approach encourages the development of parsimonious and sparse models, characterized by fewer non-zero parameters.
+
+The Lasso method is particularly effective in addressing issues of multicollinearity among predictors, making it well-suited for high-dimensional data. Moreover, it facilitates automated model selection by simultaneously performing variable selection and coefficient estimation, thereby identifying a subset of relevant features.
+
+Lasso regression employs the L1 regularization penalty, which adds the absolute values of the regression coefficients to the objective function. This property inherently enables feature selection by shrinking some coefficients to exactly zero, thereby eliminating less significant variables from the model. Consequently, Lasso regression is particularly advantageous in scenarios involving a large number of predictors or when feature selection is an integral part of the modeling process. 
+
+### Regularization
+#### Regularization in Least Squares Setting
+
+Regularization addresses the issues described earlier. At a high level, it allows for the production of nontrivial coefficient estimates and can often yield better predictions. While traditional views hold that regularization almost always improves predictions, recent research in overparameterization reveals nuances in its effects. The effectiveness of regularization depends strongly on the specific characteristics of the prediction problem.
+
+In the context of least squares regression, traditional approaches to regularization are expressed in two forms:
+
+-   **Constrained form**:\
+    Minimize $\| Y - X \beta \|_2^2$ subject to $\beta \in C$.
+
+-   **Penalized form**:\
+    Minimize $\| Y - X \beta \|_2^2 + h(\beta)$.
+
+Here: 
+
+- $C$ represents a (typically convex) set. 
+- $h$ is a (typically convex) penalty function.\
+For instance, $C = \{ \beta : \| \beta \| \leq t \}$ is the sublevel set of a norm $\|\cdot\|$, and $h(\beta) = \lambda \|\beta\|$ is a nonnegative multiple of the norm.
+
+The constrained and penalized forms are equivalent under convex duality. Specifically, for any $t \geq 0$, there exists a value $\lambda \geq 0$ such that the solution $\hat{\beta}$ to the constrained problem also solves the penalized problem, and vice versa.
+
+### Canonical Regularizers: $\ell_0$, $\ell_1$, and $\ell_2$
+
+In regression, three canonical choices for regularizers are:
+
+-   $\ell_0$ norm: $\|\beta\|_0 = \sum_{j=1}^d 1\{\beta_j \neq 0\}$
+-   $\ell_1$ norm: $\|\beta\|_1 = \sum_{j=1}^d |\beta_j|$
+-   $\ell_2$ norm: $\|\beta\|_2 = \left( \sum_{j=1}^d \beta_j^2 \right)^{1/2}$
+
+These norms correspond to different regularization techniques: - $\ell_0$ norm is associated with best subset selection. - $\ell_1$ norm corresponds to **lasso regression**. - $\ell_2$ norm corresponds to ridge regression.
+
+Regularization in Regression:
+
+Regularization is a critical concept in regression analysis used to prevent overfitting, especially in cases where there is a significant variance between the training and test datasets. It achieves this by introducing a **penalty term** to the model’s objective function, thereby improving the model's ability to generalize to unseen data.
+
+How Regularization Works:
+
+Regularization modifies the best-fit model derived from the training data by: - Adding a penalty term to reduce variance in predictions on test data. - Restricting the influence of predictor variables on the output variable by compressing their coefficients.
+
+The primary goal of regularization is to retain the same number of features while reducing the **magnitude of the coefficients**. This is achieved by applying specialized regression techniques that incorporate regularization, allowing the model to address overfitting effectively.
+
+Types of Regularization:
+
+Various regression techniques employ regularization to overcome the challenges of overfitting. Each approach uses a different method to control the magnitude of the coefficients. These techniques will be discussed in detail. 
+
+### Principle
+
+### 1. Formula
+
+LASSO minimizes the residual sum of squares subject to a penalty on the absolute values of the coefficients:
+
+$$
+\min_{\beta} \left\{ \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p x_{ij} \beta_j)^2 \right\}, \quad \text{subject to} \quad \sum_{j=1}^p |\beta_j| \leq t
+$$
+
+Where:
+
+-   $y_i:$ Response variable.
+
+-   $x_{ij}:$ Predictor variables.
+
+-   $\beta_j:$ Coefficients to be estimated.
+
+-   $t:$ Tuning parameter that controls the amount of shrinkage applied.
+
+By penalizing the absolute size of the coefficients, LASSO tends to set some coefficients to exactly zero, effectively selecting a simpler subset of predictors.
+
+### LASSO Regression Objective Function
+
+The LASSO (Least Absolute Shrinkage and Selection Operator) regression minimizes the following objective function: $$
+\min_{\beta} \left\{ \frac{1}{2n} \sum_{i=1}^n \left( y_i - \beta_0 - \sum_{j=1}^p x_{ij} \beta_j \right)^2 + \lambda \sum_{j=1}^p |\beta_j| \right\}
+$$ Where:
+
+- $y_i$: Response variable for the $i$-th observation. 
+- $x_{ij}$: Predictor variable for the $i$-th observation and $j$-th feature. 
+- $\beta_j$: Coefficients to be estimated for the $j$-th predictor. 
+- $\lambda$: Regularization parameter controlling the amount of shrinkage. 
+- $n$: Number of observations. 
+- $p$: Number of predictors.
+
+-   **Residual Sum of Squares (RSS)**: The first term measures the goodness of fit of the model to the data.
+-   **L1 Regularization Term**: The second term penalizes the absolute values of the coefficients, encouraging sparsity.
+-   **Tuning Parameter (**$\lambda$): Controls the trade-off between model complexity and goodness of fit.
+
+As $\lambda$ increases, more coefficients are shrunk to zero, effectively performing feature selection.
+
+### 2. Objective of LASSO Regression
+
+The objective of LASSO regression is to determine the coefficients that minimize the following objective function:
+
+Objective Function = $RSS + L_1$
+
+### 3. Shrinking Coefficients in LASSO Regression
+
+LASSO regression incorporates the L1 regularization term, which shrinks the coefficients towards zero. When the tuning parameter $\lambda$ is sufficiently large, some coefficients are driven exactly to zero.
+
+This unique property of LASSO regression makes it particularly useful for feature selection, as variables with zero coefficients are effectively excluded from the model.
+
+### 4. Tuning Parameter
+
+The regularization parameter $\lambda$ plays a crucial role in LASSO regression:
+
+-   A larger $\lambda$ increases the amount of regularization, pushing more coefficients towards zero.
+-   A small $\lambda$ reduces the regularization effect, allowing more variables to retain non-zero coefficients.
+
+### 5. Model Fitting
+
+To estimate the coefficients in LASSO regression, optimization algorithms are employed to minimize the objective function. One commonly used algorithm is **Coordinate Descent**, which iteratively updates each coefficient while keeping the others fixed.
+
+### Example in R
+
+```{r}
+# Load the necessary libraries
+#install.packages("rms")
+#install.packages("glmnet")
+#install.packages("caret")
+library(rms)
+library(glmnet) # For lasso regression
+library(caret)  # For additional model utilities
+
+# Load the dataset and handle missing values
+data <- survival::lung  # Load the dataset directly from the survival package
+data <- na.omit(data)  # Remove rows with missing values
+
+# If a variable has 3 categories, create dummy variables
+# Assuming a categorical variable `X` has levels A, B, C
+# Convert it to two dummy variables
+# data$X_B <- ifelse(data$X == "B", 1, 0)
+# data$X_C <- ifelse(data$X == "C", 1, 0)
+
+# Convert data to a matrix format for glmnet
+# Predictors are columns 4 to 10
+X <- as.matrix(data[, 4:10])
+
+# Response variable is column 3
+Y <- as.matrix(data[, 3])
+
+# Fit a lasso regression model
+# alpha = 1 indicates lasso regression; alpha = 0 would indicate ridge regression
+lasso <- glmnet(X, Y, alpha = 1, family = "binomial", nlambda = 100)
+
+# If alpha = 0, glmnet performs ridge regression.
+# `nlambda = 100` ensures 100 iterations to find the optimal lambda.
+print(lasso)
+
+# Plot the coefficients against the log(lambda)
+plot(lasso, xvar = "lambda", label = TRUE)
+title(main = "LASSO Path: Coefficients vs Log(Lambda)", xlab = "Log(Lambda)", ylab = "Coefficients")
+
+# Cross-validation for optimal lambda
+set.seed(42)  # For reproducibility
+cv_lasso <- cv.glmnet(X, Y, alpha = 1, family = "binomial", nfolds = 10)
+
+# Plot cross-validation results
+plot(cv_lasso)
+title(main = "Cross-Validation for LASSO", xlab = "Log(Lambda)", ylab = "Cross-Validation Error")
+
+# Optimal lambda
+optimal_lambda <- cv_lasso$lambda.min
+cat("Optimal Lambda: ", optimal_lambda, "\n")
+
+# Coefficients at optimal lambda
+lasso_coef <- coef(cv_lasso, s = "lambda.min")
+print(lasso_coef)
+```
+
+### Analysis of LASSO Regression Results
+
+### Coefficient Plot (LASSO Path)
+
+The coefficient plot demonstrates how the magnitude of the coefficients changes as the regularization parameter$\lambda$ varies.
+
+-   As $\lambda$ increases (moving leftwards on the x-axis, represented as $\log(\lambda)$), the coefficients shrink towards zero. This behavior reflects the regularization effect of LASSO, penalizing large coefficients and promoting sparsity in the model.
+-   Variables such as `age` and `sex` remain significant across a range of $\lambda$, while others (e.g., `meal.cal` and `wt.loss`) shrink to zero, indicating their lesser relevance in the model.
+
+### Cross-Validation for LASSO
+
+The cross-validation plot evaluates the relationship between $\lambda$ and the cross-validated deviance (or error).
+
+-   The red dots represent the average error at each $\lambda$ value, and the vertical bars show the standard deviation.
+-   The optimal $\lambda$ is identified at the point of minimum deviance, balancing bias and variance for a well-regularized model with strong predictive performance.
+
+### Optimal Model
+
+At the optimal $\lambda$, the LASSO model selects a subset of predictors that contribute most significantly to the response variable.
+
+-   Some coefficients are set exactly to zero, simplifying the model by excluding less influential predictors.
+-   Significant predictors such as `age`, `sex`, and `ph.ecog` remain in the model, indicating their relevance to the response variable.
+
+### Practical Implications
+
+-   The final model focuses on key predictors, improving interpretability while retaining predictive accuracy.
+-   Variables with coefficients reduced to zero can be excluded, which helps reduce overfitting and simplifies the model.
+
+### Conclusion
+
+These results underscore the effectiveness of LASSO regression in feature selection and mitigating overfitting, especially for high-dimensional datasets with multicollinearity.
+
+# Reference Material
+
+> Tibshirani, R. (1996). Regression Shrinkage and Selection via the Lasso. *Journal of the Royal Statistical Society: Series B (Methodological)*, 58(1), 267–288.
+
+For further exploration, the following references provide comprehensive insights into the theory and applications of LASSO regression:
+
+1.  **Lecture Notes by Tibshirani**: Available at [LASSO Regression Notes](https://www.stat.berkeley.edu/~ryantibs/statlearn-s23/lectures/lasso.pdf).
+2.  **University of Chicago Materials**: Accessible at [Stat 224 Lecture 18](https://www.stat.uchicago.edu/~yibi/teaching/stat224/L18.pdf).

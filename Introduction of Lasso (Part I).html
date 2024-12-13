@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Luhan Tang">
+
+<title>Introduction of Lasso (Part I)</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Introduction of Lasso (Part I)_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Introduction of Lasso (Part I)_files/libs/quarto-html/quarto.js"></script>
+<script src="Introduction of Lasso (Part I)_files/libs/quarto-html/popper.min.js"></script>
+<script src="Introduction of Lasso (Part I)_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Introduction of Lasso (Part I)_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Introduction of Lasso (Part I)_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Introduction of Lasso (Part I)_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Introduction of Lasso (Part I)_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Introduction of Lasso (Part I)_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Introduction of Lasso (Part I)_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Introduction of Lasso (Part I)</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Luhan Tang </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="section" class="level2">
+<h2 class="anchored" data-anchor-id="section"></h2>
+<section id="final-project" class="level3">
+<h3 class="anchored" data-anchor-id="final-project">Final Project</h3>
+<p><strong>Author</strong>: Luhan Tang <strong>Course</strong>: STAT206</p>
+</section>
+</section>
+<section id="background" class="level1">
+<h1>Background</h1>
+<p>The <strong>Least Absolute Shrinkage and Selection Operator (LASSO)</strong>, proposed by Tibshirani (1996), is a regression method designed to improve prediction accuracy and interpretability of statistical models.</p>
+<p>In traditional Ordinary Least Squares (OLS) regression, the model often has low bias but suffers from high variance, especially with a large number of predictors. This can result in overfitting and decreased generalization performance. LASSO addresses these issues by applying a constraint on the sum of the absolute values of the regression coefficients, encouraging sparsity in the model.</p>
+</section>
+<section id="recall-least-squares-regression" class="level1">
+<h1>Recall: Least Squares Regression</h1>
+<p>First and foremost, I want to bring you back to the Least Squares Regression. It is the basis of LASSO Regression.</p>
+<p>Suppose we are given <span class="math inline">\(n\)</span> observations of the form <span class="math inline">\((x_i, y_i)\)</span>, <span class="math inline">\(i = 1, \dots, n\)</span>, where each <span class="math inline">\(x_i \in \mathbb{R}^d\)</span> denotes a feature vector and <span class="math inline">\(y_i \in \mathbb{R}\)</span> an associated response value. Let <span class="math inline">\(X \in \mathbb{R}^{n \times d}\)</span> denote the predictor matrix (whose <span class="math inline">\(i^{th}\)</span> row is <span class="math inline">\(x_i\)</span>) and <span class="math inline">\(Y \in \mathbb{R}^n\)</span> denote the response vector. Recall that the least squares regression coefficients of <span class="math inline">\(Y\)</span> on <span class="math inline">\(X\)</span> are given by solving <span class="math inline">\(\min_{\beta} \|Y - X\beta\|_2^2\)</span>. When <span class="math inline">\(d \leq n\)</span> and <span class="math inline">\(\text{rank}(X) = d\)</span>, this produces the unique solution <span class="math inline">\(\hat{\beta} = (X^\top X)^{-1} X^\top Y\)</span>. The fitted values (i.e., in-sample predictions) are <span class="math inline">\(X\hat{\beta} = X(X^\top X)^{-1} X^\top Y = P_X Y\)</span>, where <span class="math inline">\(P_X = X(X^\top X)^{-1} X^\top\)</span> denotes the projection onto the column space of <span class="math inline">\(X\)</span>.</p>
+<p><span class="math display">\[
+\min_{\beta} \|Y - X\beta\|_2^2.
+\]</span></p>
+<section id="principle" class="level2">
+<h2 class="anchored" data-anchor-id="principle">Principle</h2>
+<p>When <span class="math inline">\(d \leq n\)</span> and <span class="math inline">\(\text{rank}(X) = d\)</span>, this produces the unique solution:</p>
+<p><span class="math display">\[
+\hat{\beta} = (X^\top X)^{-1} X^\top Y.
+\]</span></p>
+<p>The fitted values (i.e., in-sample predictions) are:</p>
+<p><span class="math display">\[
+X\hat{\beta} = X(X^\top X)^{-1} X^\top Y = P_X Y,
+\]</span> where <span class="math inline">\(P_X = X(X^\top X)^{-1} X^\top\)</span> denotes the projection onto the column space of <span class="math inline">\(X\)</span>.</p>
+</section>
+<section id="trouble-in-ols-when-in-high-dimensions" class="level2">
+<h2 class="anchored" data-anchor-id="trouble-in-ols-when-in-high-dimensions">Trouble in OLS when in High Dimensions</h2>
+<p>As we just saw, the risk of least squares regression degrades as <span class="math inline">\(d\)</span> grows close to <span class="math inline">\(n\)</span>, the out-of-sample risk actually diverges at <span class="math inline">\(d = n\)</span>.</p>
+<p>Meanwhile, the least squares estimator itself is not even well-defined when <span class="math inline">\(d &gt; n\)</span>, in that the optimization problem <span class="math inline">\(\min_{\beta} \|Y - X\beta\|_2^2.\)</span> does not have a unique solution. In this case, any vector of the form <span class="math display">\[
+\hat{\beta} = (X^\top X)^+ X^\top Y + \eta, \quad \text{where } \eta \in \text{null}(X),
+\]</span></p>
+<p>solves it, where we write <span class="math inline">\(A^+\)</span> to denote the generalized inverse of a matrix <span class="math inline">\(A\)</span>, and <span class="math inline">\(\text{null}(A)\)</span> to denote its null space.</p>
+<p>If all we care about is out-of-sample prediction, then this is not the end of the story for least squares—it turns out that taking <span class="math inline">\(\eta = 0\)</span> in (5), which yields the minimum <span class="math inline">\(\ell_2\)</span> norm least squares solution, can still have interesting predictive properties when <span class="math inline">\(d &gt; n\)</span>.</p>
+<p>But if we additionally care about the estimated coefficients themselves, then it really is the end of the road for least squares. This is because, for any <span class="math inline">\(\hat{\beta}\)</span> of the form (5) with <span class="math inline">\(\hat{\beta}_j &gt; 0\)</span> for some component <span class="math inline">\(j\)</span>, we can always find another <span class="math inline">\(\hat{\beta}\)</span> of the form (5) with <span class="math inline">\(\hat{\beta}_j &lt; 0\)</span>. So we cannot even consistently interpret the sign of any estimated coefficient (let alone its magnitude).</p>
+</section>
+<section id="lasso" class="level2">
+<h2 class="anchored" data-anchor-id="lasso">LASSO</h2>
+<p>Lasso regression, also known as Least Absolute Shrinkage and Selection Operator regression, is a regularization technique designed to enhance the accuracy of predictive models. It achieves this by incorporating shrinkage, a process in which coefficient estimates are reduced toward a central point, such as the mean. This approach encourages the development of parsimonious and sparse models, characterized by fewer non-zero parameters.</p>
+<p>The Lasso method is particularly effective in addressing issues of multicollinearity among predictors, making it well-suited for high-dimensional data. Moreover, it facilitates automated model selection by simultaneously performing variable selection and coefficient estimation, thereby identifying a subset of relevant features.</p>
+<p>Lasso regression employs the L1 regularization penalty, which adds the absolute values of the regression coefficients to the objective function. This property inherently enables feature selection by shrinking some coefficients to exactly zero, thereby eliminating less significant variables from the model. Consequently, Lasso regression is particularly advantageous in scenarios involving a large number of predictors or when feature selection is an integral part of the modeling process.</p>
+<section id="regularization" class="level3">
+<h3 class="anchored" data-anchor-id="regularization">Regularization</h3>
+<section id="regularization-in-least-squares-setting" class="level4">
+<h4 class="anchored" data-anchor-id="regularization-in-least-squares-setting">Regularization in Least Squares Setting</h4>
+<p>Regularization addresses the issues described earlier. At a high level, it allows for the production of nontrivial coefficient estimates and can often yield better predictions. While traditional views hold that regularization almost always improves predictions, recent research in overparameterization reveals nuances in its effects. The effectiveness of regularization depends strongly on the specific characteristics of the prediction problem.</p>
+<p>In the context of least squares regression, traditional approaches to regularization are expressed in two forms:</p>
+<ul>
+<li><p><strong>Constrained form</strong>:<br>
+Minimize <span class="math inline">\(\| Y - X \beta \|_2^2\)</span> subject to <span class="math inline">\(\beta \in C\)</span>.</p></li>
+<li><p><strong>Penalized form</strong>:<br>
+Minimize <span class="math inline">\(\| Y - X \beta \|_2^2 + h(\beta)\)</span>.</p></li>
+</ul>
+<p>Here:</p>
+<ul>
+<li><span class="math inline">\(C\)</span> represents a (typically convex) set.</li>
+<li><span class="math inline">\(h\)</span> is a (typically convex) penalty function.<br>
+For instance, <span class="math inline">\(C = \{ \beta : \| \beta \| \leq t \}\)</span> is the sublevel set of a norm <span class="math inline">\(\|\cdot\|\)</span>, and <span class="math inline">\(h(\beta) = \lambda \|\beta\|\)</span> is a nonnegative multiple of the norm.</li>
+</ul>
+<p>The constrained and penalized forms are equivalent under convex duality. Specifically, for any <span class="math inline">\(t \geq 0\)</span>, there exists a value <span class="math inline">\(\lambda \geq 0\)</span> such that the solution <span class="math inline">\(\hat{\beta}\)</span> to the constrained problem also solves the penalized problem, and vice versa.</p>
+</section>
+</section>
+<section id="canonical-regularizers-ell_0-ell_1-and-ell_2" class="level3">
+<h3 class="anchored" data-anchor-id="canonical-regularizers-ell_0-ell_1-and-ell_2">Canonical Regularizers: <span class="math inline">\(\ell_0\)</span>, <span class="math inline">\(\ell_1\)</span>, and <span class="math inline">\(\ell_2\)</span></h3>
+<p>In regression, three canonical choices for regularizers are:</p>
+<ul>
+<li><span class="math inline">\(\ell_0\)</span> norm: <span class="math inline">\(\|\beta\|_0 = \sum_{j=1}^d 1\{\beta_j \neq 0\}\)</span></li>
+<li><span class="math inline">\(\ell_1\)</span> norm: <span class="math inline">\(\|\beta\|_1 = \sum_{j=1}^d |\beta_j|\)</span></li>
+<li><span class="math inline">\(\ell_2\)</span> norm: <span class="math inline">\(\|\beta\|_2 = \left( \sum_{j=1}^d \beta_j^2 \right)^{1/2}\)</span></li>
+</ul>
+<p>These norms correspond to different regularization techniques: - <span class="math inline">\(\ell_0\)</span> norm is associated with best subset selection. - <span class="math inline">\(\ell_1\)</span> norm corresponds to <strong>lasso regression</strong>. - <span class="math inline">\(\ell_2\)</span> norm corresponds to ridge regression.</p>
+<p>Regularization in Regression:</p>
+<p>Regularization is a critical concept in regression analysis used to prevent overfitting, especially in cases where there is a significant variance between the training and test datasets. It achieves this by introducing a <strong>penalty term</strong> to the model’s objective function, thereby improving the model’s ability to generalize to unseen data.</p>
+<p>How Regularization Works:</p>
+<p>Regularization modifies the best-fit model derived from the training data by: - Adding a penalty term to reduce variance in predictions on test data. - Restricting the influence of predictor variables on the output variable by compressing their coefficients.</p>
+<p>The primary goal of regularization is to retain the same number of features while reducing the <strong>magnitude of the coefficients</strong>. This is achieved by applying specialized regression techniques that incorporate regularization, allowing the model to address overfitting effectively.</p>
+<p>Types of Regularization:</p>
+<p>Various regression techniques employ regularization to overcome the challenges of overfitting. Each approach uses a different method to control the magnitude of the coefficients. These techniques will be discussed in detail.</p>
+</section>
+<section id="principle-1" class="level3">
+<h3 class="anchored" data-anchor-id="principle-1">Principle</h3>
+</section>
+<section id="formula" class="level3">
+<h3 class="anchored" data-anchor-id="formula">1. Formula</h3>
+<p>LASSO minimizes the residual sum of squares subject to a penalty on the absolute values of the coefficients:</p>
+<p><span class="math display">\[
+\min_{\beta} \left\{ \sum_{i=1}^n (y_i - \beta_0 - \sum_{j=1}^p x_{ij} \beta_j)^2 \right\}, \quad \text{subject to} \quad \sum_{j=1}^p |\beta_j| \leq t
+\]</span></p>
+<p>Where:</p>
+<ul>
+<li><p><span class="math inline">\(y_i:\)</span> Response variable.</p></li>
+<li><p><span class="math inline">\(x_{ij}:\)</span> Predictor variables.</p></li>
+<li><p><span class="math inline">\(\beta_j:\)</span> Coefficients to be estimated.</p></li>
+<li><p><span class="math inline">\(t:\)</span> Tuning parameter that controls the amount of shrinkage applied.</p></li>
+</ul>
+<p>By penalizing the absolute size of the coefficients, LASSO tends to set some coefficients to exactly zero, effectively selecting a simpler subset of predictors.</p>
+</section>
+<section id="lasso-regression-objective-function" class="level3">
+<h3 class="anchored" data-anchor-id="lasso-regression-objective-function">LASSO Regression Objective Function</h3>
+<p>The LASSO (Least Absolute Shrinkage and Selection Operator) regression minimizes the following objective function: <span class="math display">\[
+\min_{\beta} \left\{ \frac{1}{2n} \sum_{i=1}^n \left( y_i - \beta_0 - \sum_{j=1}^p x_{ij} \beta_j \right)^2 + \lambda \sum_{j=1}^p |\beta_j| \right\}
+\]</span> Where:</p>
+<ul>
+<li><p><span class="math inline">\(y_i\)</span>: Response variable for the <span class="math inline">\(i\)</span>-th observation.</p></li>
+<li><p><span class="math inline">\(x_{ij}\)</span>: Predictor variable for the <span class="math inline">\(i\)</span>-th observation and <span class="math inline">\(j\)</span>-th feature.</p></li>
+<li><p><span class="math inline">\(\beta_j\)</span>: Coefficients to be estimated for the <span class="math inline">\(j\)</span>-th predictor.</p></li>
+<li><p><span class="math inline">\(\lambda\)</span>: Regularization parameter controlling the amount of shrinkage.</p></li>
+<li><p><span class="math inline">\(n\)</span>: Number of observations.</p></li>
+<li><p><span class="math inline">\(p\)</span>: Number of predictors.</p></li>
+<li><p><strong>Residual Sum of Squares (RSS)</strong>: The first term measures the goodness of fit of the model to the data.</p></li>
+<li><p><strong>L1 Regularization Term</strong>: The second term penalizes the absolute values of the coefficients, encouraging sparsity.</p></li>
+<li><p><strong>Tuning Parameter (</strong><span class="math inline">\(\lambda\)</span>): Controls the trade-off between model complexity and goodness of fit.</p></li>
+</ul>
+<p>As <span class="math inline">\(\lambda\)</span> increases, more coefficients are shrunk to zero, effectively performing feature selection.</p>
+</section>
+<section id="objective-of-lasso-regression" class="level3">
+<h3 class="anchored" data-anchor-id="objective-of-lasso-regression">2. Objective of LASSO Regression</h3>
+<p>The objective of LASSO regression is to determine the coefficients that minimize the following objective function:</p>
+<p>Objective Function = <span class="math inline">\(RSS + L_1\)</span></p>
+</section>
+<section id="shrinking-coefficients-in-lasso-regression" class="level3">
+<h3 class="anchored" data-anchor-id="shrinking-coefficients-in-lasso-regression">3. Shrinking Coefficients in LASSO Regression</h3>
+<p>LASSO regression incorporates the L1 regularization term, which shrinks the coefficients towards zero. When the tuning parameter <span class="math inline">\(\lambda\)</span> is sufficiently large, some coefficients are driven exactly to zero.</p>
+<p>This unique property of LASSO regression makes it particularly useful for feature selection, as variables with zero coefficients are effectively excluded from the model.</p>
+</section>
+<section id="tuning-parameter" class="level3">
+<h3 class="anchored" data-anchor-id="tuning-parameter">4. Tuning Parameter</h3>
+<p>The regularization parameter <span class="math inline">\(\lambda\)</span> plays a crucial role in LASSO regression:</p>
+<ul>
+<li>A larger <span class="math inline">\(\lambda\)</span> increases the amount of regularization, pushing more coefficients towards zero.</li>
+<li>A small <span class="math inline">\(\lambda\)</span> reduces the regularization effect, allowing more variables to retain non-zero coefficients.</li>
+</ul>
+</section>
+<section id="model-fitting" class="level3">
+<h3 class="anchored" data-anchor-id="model-fitting">5. Model Fitting</h3>
+<p>To estimate the coefficients in LASSO regression, optimization algorithms are employed to minimize the objective function. One commonly used algorithm is <strong>Coordinate Descent</strong>, which iteratively updates each coefficient while keeping the others fixed.</p>
+</section>
+<section id="example-in-r" class="level3">
+<h3 class="anchored" data-anchor-id="example-in-r">Example in R</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the necessary libraries</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("rms")</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("glmnet")</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("caret")</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Hmisc</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Hmisc'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:base':
+
+    format.pval, units</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(glmnet) <span class="co"># For lasso regression</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Matrix</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loaded glmnet 4.1-8</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(caret)  <span class="co"># For additional model utilities</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: ggplot2</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: lattice</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the dataset and handle missing values</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> survival<span class="sc">::</span>lung  <span class="co"># Load the dataset directly from the survival package</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(data)  <span class="co"># Remove rows with missing values</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co"># If a variable has 3 categories, create dummy variables</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Assuming a categorical variable `X` has levels A, B, C</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert it to two dummy variables</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co"># data$X_B &lt;- ifelse(data$X == "B", 1, 0)</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a><span class="co"># data$X_C &lt;- ifelse(data$X == "C", 1, 0)</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert data to a matrix format for glmnet</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Predictors are columns 4 to 10</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(data[, <span class="dv">4</span><span class="sc">:</span><span class="dv">10</span>])</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Response variable is column 3</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>Y <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(data[, <span class="dv">3</span>])</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit a lasso regression model</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a><span class="co"># alpha = 1 indicates lasso regression; alpha = 0 would indicate ridge regression</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>lasso <span class="ot">&lt;-</span> <span class="fu">glmnet</span>(X, Y, <span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">family =</span> <span class="st">"binomial"</span>, <span class="at">nlambda =</span> <span class="dv">100</span>)</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="co"># If alpha = 0, glmnet performs ridge regression.</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="co"># `nlambda = 100` ensures 100 iterations to find the optimal lambda.</span></span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(lasso)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:  glmnet(x = X, y = Y, family = "binomial", alpha = 1, nlambda = 100) 
+
+   Df  %Dev   Lambda
+1   0  0.00 0.107100
+2   2  0.87 0.097540
+3   2  2.21 0.088880
+4   2  3.33 0.080980
+5   2  4.26 0.073790
+6   2  5.04 0.067230
+7   2  5.69 0.061260
+8   2  6.24 0.055820
+9   2  6.70 0.050860
+10  3  7.10 0.046340
+11  4  7.50 0.042220
+12  4  7.85 0.038470
+13  4  8.14 0.035060
+14  4  8.38 0.031940
+15  4  8.58 0.029100
+16  4  8.75 0.026520
+17  4  8.90 0.024160
+18  4  9.02 0.022020
+19  4  9.12 0.020060
+20  4  9.20 0.018280
+21  4  9.27 0.016650
+22  4  9.33 0.015170
+23  4  9.38 0.013830
+24  5  9.42 0.012600
+25  5  9.48 0.011480
+26  5  9.52 0.010460
+27  5  9.56 0.009530
+28  7  9.68 0.008684
+29  7  9.79 0.007912
+30  7  9.89 0.007209
+31  7  9.97 0.006569
+32  7 10.04 0.005985
+33  7 10.10 0.005454
+34  7 10.15 0.004969
+35  7 10.19 0.004528
+36  7 10.22 0.004125
+37  7 10.25 0.003759
+38  7 10.27 0.003425
+39  7 10.29 0.003121
+40  7 10.31 0.002843
+41  7 10.32 0.002591
+42  7 10.33 0.002361
+43  7 10.34 0.002151
+44  7 10.35 0.001960
+45  7 10.35 0.001786
+46  7 10.36 0.001627
+47  7 10.36 0.001483
+48  7 10.37 0.001351
+49  7 10.37 0.001231
+50  7 10.37 0.001122
+51  7 10.37 0.001022
+52  7 10.38 0.000931
+53  7 10.38 0.000848
+54  7 10.38 0.000773
+55  7 10.38 0.000704</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the coefficients against the log(lambda)</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(lasso, <span class="at">xvar =</span> <span class="st">"lambda"</span>, <span class="at">label =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span>(<span class="at">main =</span> <span class="st">"LASSO Path: Coefficients vs Log(Lambda)"</span>, <span class="at">xlab =</span> <span class="st">"Log(Lambda)"</span>, <span class="at">ylab =</span> <span class="st">"Coefficients"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Introduction-of-Lasso--Part-I-_files/figure-html/unnamed-chunk-1-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cross-validation for optimal lambda</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">42</span>)  <span class="co"># For reproducibility</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>cv_lasso <span class="ot">&lt;-</span> <span class="fu">cv.glmnet</span>(X, Y, <span class="at">alpha =</span> <span class="dv">1</span>, <span class="at">family =</span> <span class="st">"binomial"</span>, <span class="at">nfolds =</span> <span class="dv">10</span>)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot cross-validation results</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(cv_lasso)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">title</span>(<span class="at">main =</span> <span class="st">"Cross-Validation for LASSO"</span>, <span class="at">xlab =</span> <span class="st">"Log(Lambda)"</span>, <span class="at">ylab =</span> <span class="st">"Cross-Validation Error"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Introduction-of-Lasso--Part-I-_files/figure-html/unnamed-chunk-1-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optimal lambda</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>optimal_lambda <span class="ot">&lt;-</span> cv_lasso<span class="sc">$</span>lambda.min</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Optimal Lambda: "</span>, optimal_lambda, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Optimal Lambda:  0.03505563 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Coefficients at optimal lambda</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>lasso_coef <span class="ot">&lt;-</span> <span class="fu">coef</span>(cv_lasso, <span class="at">s =</span> <span class="st">"lambda.min"</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(lasso_coef)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>8 x 1 sparse Matrix of class "dgCMatrix"
+                      s1
+(Intercept)  1.390341873
+age          0.003420687
+sex         -0.629636686
+ph.ecog      0.472342775
+ph.karno     .          
+pat.karno   -0.002485985
+meal.cal     .          
+wt.loss      .          </code></pre>
+</div>
+</div>
+</section>
+<section id="analysis-of-lasso-regression-results" class="level3">
+<h3 class="anchored" data-anchor-id="analysis-of-lasso-regression-results">Analysis of LASSO Regression Results</h3>
+</section>
+<section id="coefficient-plot-lasso-path" class="level3">
+<h3 class="anchored" data-anchor-id="coefficient-plot-lasso-path">Coefficient Plot (LASSO Path)</h3>
+<p>The coefficient plot demonstrates how the magnitude of the coefficients changes as the regularization parameter<span class="math inline">\(\lambda\)</span> varies.</p>
+<ul>
+<li>As <span class="math inline">\(\lambda\)</span> increases (moving leftwards on the x-axis, represented as <span class="math inline">\(\log(\lambda)\)</span>), the coefficients shrink towards zero. This behavior reflects the regularization effect of LASSO, penalizing large coefficients and promoting sparsity in the model.</li>
+<li>Variables such as <code>age</code> and <code>sex</code> remain significant across a range of <span class="math inline">\(\lambda\)</span>, while others (e.g., <code>meal.cal</code> and <code>wt.loss</code>) shrink to zero, indicating their lesser relevance in the model.</li>
+</ul>
+</section>
+<section id="cross-validation-for-lasso" class="level3">
+<h3 class="anchored" data-anchor-id="cross-validation-for-lasso">Cross-Validation for LASSO</h3>
+<p>The cross-validation plot evaluates the relationship between <span class="math inline">\(\lambda\)</span> and the cross-validated deviance (or error).</p>
+<ul>
+<li>The red dots represent the average error at each <span class="math inline">\(\lambda\)</span> value, and the vertical bars show the standard deviation.</li>
+<li>The optimal <span class="math inline">\(\lambda\)</span> is identified at the point of minimum deviance, balancing bias and variance for a well-regularized model with strong predictive performance.</li>
+</ul>
+</section>
+<section id="optimal-model" class="level3">
+<h3 class="anchored" data-anchor-id="optimal-model">Optimal Model</h3>
+<p>At the optimal <span class="math inline">\(\lambda\)</span>, the LASSO model selects a subset of predictors that contribute most significantly to the response variable.</p>
+<ul>
+<li>Some coefficients are set exactly to zero, simplifying the model by excluding less influential predictors.</li>
+<li>Significant predictors such as <code>age</code>, <code>sex</code>, and <code>ph.ecog</code> remain in the model, indicating their relevance to the response variable.</li>
+</ul>
+</section>
+<section id="practical-implications" class="level3">
+<h3 class="anchored" data-anchor-id="practical-implications">Practical Implications</h3>
+<ul>
+<li>The final model focuses on key predictors, improving interpretability while retaining predictive accuracy.</li>
+<li>Variables with coefficients reduced to zero can be excluded, which helps reduce overfitting and simplifies the model.</li>
+</ul>
+</section>
+<section id="conclusion" class="level3">
+<h3 class="anchored" data-anchor-id="conclusion">Conclusion</h3>
+<p>These results underscore the effectiveness of LASSO regression in feature selection and mitigating overfitting, especially for high-dimensional datasets with multicollinearity.</p>
+</section>
+</section>
+</section>
+<section id="reference-material" class="level1">
+<h1>Reference Material</h1>
+<blockquote class="blockquote">
+<p>Tibshirani, R. (1996). Regression Shrinkage and Selection via the Lasso. <em>Journal of the Royal Statistical Society: Series B (Methodological)</em>, 58(1), 267–288.</p>
+</blockquote>
+<p>For further exploration, the following references provide comprehensive insights into the theory and applications of LASSO regression:</p>
+<ol type="1">
+<li><strong>Lecture Notes by Tibshirani</strong>: Available at <a href="https://www.stat.berkeley.edu/~ryantibs/statlearn-s23/lectures/lasso.pdf">LASSO Regression Notes</a>.</li>
+<li><strong>University of Chicago Materials</strong>: Accessible at <a href="https://www.stat.uchicago.edu/~yibi/teaching/stat224/L18.pdf">Stat 224 Lecture 18</a>.</li>
+</ol>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
