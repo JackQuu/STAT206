@@ -1,0 +1,32 @@
+---
+title: "Trans_Lasso_intro"
+author: "Pei-Ling Lin"
+format: html
+editor: visual
+---
+
+## Transfer Learning
+
+Given a target problem, transfer learning (Torrey and Shavlik, 2010) aims at transferring the knowledge from different but related samples to improve the learning performance of the target problem.
+
+## Transfer Learning in High-dimensional Linear Regression
+
+If a sample/study is similar or related to the target problem, we say that, this auxiliary  sample/study is informative. A key difficulty in applying transfer learning to high-dimensional linear regression is that informative samples/studies are not always known, which makes transfer learning more challenging to implement.
+
+### Literature review : S. Li, T. T. Cai, H. Li (2022)
+
+Motivated by the Genotype-Tissue Expression (GTEx) data, which are high-dimensional with relatively small sample sizes, S. Li, T. T. Cai, and H. Li (2022) proposed 'Trans-Lasso,' a data-driven procedure designed to address the challenge of identifying informative samples/studies.
+
+In the simulation, the authors compared five methods (Trans-Lasso, Oracle Trans−Lasso, Lasso, Aggregated Lasso, Ad hoc 1-transfer). Oracle Trans−Lasso assumes that auxiliary studies are known. Lasso is also called non-Trans-Lasso. Aggregated Lasso is similar to Trans-Lasso but excludes the bias-correction step. Similarly, Ad hoc 1-transfer is based on Trans-Lasso but replaces the Q-aggregation step with cross-validation. Among the adaptive transfer learning methods (Trans-Lasso, Lasso, Aggregated Lasso, Ad hoc 1-transfer), Trans-Lasso achieves the smallest prediction errors in almost all experiments.
+
+The proposed method has several benefits, including information integration that improves data use and learning accuracy. It also has faster coverage compared to Lasso in some situations, and is useful for sparse data tasks, such as identifying important genes from a large set of candidates. However, it has some drawbacks, including the risk of negative transfer, where prior knowledge hinders learning in new tasks due to task dissimilarity. Additionally, the method has strict sparsity and task similarity restrictions and requires heavy computational resources.
+
+## Automatic Transfer Learning for High-Dimensional Linear Regression
+
+Based on Trans-Lasso (S. Li, T. T. Cai, and H. Li, 2022), we propose an extension to the adaptive design, called Automatic Transfer Lasso (ATL), which involves allocating weights to each parameter dimension-wise. ATL customizes the method by assigning different importance to each parameter, potentially improving the model's performance by more effectively capturing the specific contributions of each dimension.
+
+In the simulation part, we conduct numerical experiments to compare ATL, Oracle Trans-Lasso, Trans-Lasso, and non-Trans-Lasso. We evaluate these methods in three aspects: positivity for knowledge transfer, consistency and double robustness, and computational efficiency.
+
+## Simulation
+
+## ...
