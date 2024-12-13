@@ -1,0 +1,228 @@
+---
+title: "Automatic Transfer Learning for High-Dimensional Linear Regression"
+author: "Xinhao Qu"
+date: 12/10/2024
+format: html
+editor: visual
+---
+
+## Data generating process
+Assume single target data set and limited number of large sources. Each row of the data matrix is independent and identically formulated through high-dimensional linear functions:
+$$
+y_i^{(k)}={x_i^{(k)}}^{\top} \beta^{(k)}+\epsilon_i^{(k)}, \quad i\in1, \ldots, n_k.
+$$
+Let $K=1$ for simplicity and $k\in\{0,1\}$ indicates the target and source data. Consider $n_0\ll n_1$, $\beta^{(k)}\in\mathbb{R}^{p}$ with $p\gg n_1$. $\epsilon_i^{(k)}$'s are the random noise. The parameter space is specified as
+$$
+\Theta_q(s, h)=\left\{\left(\beta^{(0)}, \delta \right):\|\beta^{(0)}\|_0 \leq s, \left\|\delta\right\|_q \leq h\right\},
+$$
+where $\delta\equiv\beta^{(0)}-\beta^{(1)}$. $\left\|\delta\right\|_q$ measures task dissimilarity between the target and the source, which is controlled by $h\geq0$. $q\in\{0,1\}$ with $\left\|\delta\right\|_0$ depicts the sparsity degree and $\left\|\delta\right\|_1$ describes the cumulative absolute difference between parameters. Integer $s\geq0$ confines the sparsity level of target parameters.
+
+## ATL algorithm
+**Input**: Target data $\{y_i^{(0)}, x_i^{(0)}\}_{i\in1,\ldots,n_0}$ and auxiliary samples $\{y_i^{(1)}, x_i^{(1)}\}_{i\in1,\ldots,n_1}$; tuning $\lambda_{n_1}, \lambda_{n_0}$.
+
+**Output**: $\hat{\beta}^{(0)}$.
+
+
+**Step 1**: Compute
+$$
+\hat{\beta}^{(1)}=\arg \min_{\beta \in \mathbb{R}^p}\left\{\frac{1}{2 n_1} \sum_{i=1}^{n_1} \left(y_i^{(1)}-{x_i^{(1)}}^{\top} \beta\right)^2+\lambda_{n_1} \|\beta\|_1\right\}.
+$$
+**Step 2**: Compute
+$$
+\hat{\delta}=\arg \min_{\delta \in \mathbb{R}^p} \left[\frac{1}{2n_0} \sum_{i=1}^{n_0} \left\{y_i^{(0)}-{x_i^{(0)}}^{\top} \left(\hat{\beta}^{(1)}+\delta\right)\right\}^2 +\lambda_{n_0}\sum_{j=1}^{p}w_j|\delta_j|\right].
+$$
+
+**Return**: $\hat{\beta}^{(0)}=\hat{\beta}^{(1)}+\hat{\delta}$.
+
+
+## A simple implementation
+Specify $w_j=1/|\tilde{\delta_j}|^{\gamma}$, where $\tilde{\delta}$ is a zero-consistent initial estimator, which is obtained through SCAD oracle estimation, and $\gamma>0$ captures the sensitivity for small variations.
+
+```{r}
+options(warn = -1)
+library(glmnet)
+library(ncvreg)
+library(MASS)
+source('Trans_Lasso.R')
+
+# tuning
+p = 100
+beta_t <- c(1:5,rep(0,p-5))
+beta_s <- c(11,2:5,rep(0,p-5))
+q = 1
+
+n_t = 20
+n_s = 100
+
+gamma = 0.05
+
+sim = 20
+beta.hat_t.non <- matrix(NA, nrow = sim, ncol = p)
+beta.hat_t <- matrix(NA, nrow = sim, ncol = p)
+beta.hat_t.trans <- matrix(NA, nrow = sim, ncol = p)
+beta.hat_t.trans.sp <- matrix(NA, nrow = sim, ncol = p)
+beta.hat_t.ind <- matrix(NA, nrow = sim, ncol = p)
+
+delta.hat_t.adp <- matrix(NA, nrow = sim, ncol = p)
+beta.hat_t.adp <- matrix(NA, nrow = sim, ncol = p)
+T.trans <- c()
+T.adp <- c()
+for (s in 1:sim) {
+  #### Target DGP
+  # partial orthogonal
+  SigmaX <- matrix(NA, nrow = p, ncol = p)
+  for (i in 1:p) {
+    for (j in 1:p) {
+      SigmaX[i,j] <- 0.05^(abs(i-j))
+    }
+  }
+  for (k in 1:q) {
+    SigmaX[k,-k] <- rep(0,p-1)
+    SigmaX[-k,k] <- rep(0,p-1)
+  }
+  X_t <- mvrnorm(n_t, mu = rep(1,p), Sigma = SigmaX)
+  e_t <- rnorm(n_t)
+  Y_t <- X_t%*%beta_t + e_t
+
+  #### Source DGP
+  # partial orthogonal
+  X_s <- mvrnorm(n_s, mu = rep(1,p), Sigma = SigmaX)
+  e_s <- rnorm(n_s)
+  Y_s <- X_s%*%beta_s + e_s
+
+  #### Methods
+  ### Non-Transfer
+  lasso.fit_t.non <- cv.glmnet(X_t, Y_t, intercept = FALSE, nfolds = 5)
+  beta.hat_t.non[s,] <- coef(lasso.fit_t.non)[-1,]
+
+  ### Oracle Trans-Lasso
+  X <- rbind(X_t, X_s)
+  y <- c(Y_t, Y_s)
+  n.vec <- c(n_t, n_s)
+  size.A0 <- 1
+  beta.hat_t[s,] <- las.kA(X, y, A0 = 1:size.A0, n.vec = n.vec, l1=T)$beta.kA
+
+  ### Q-aggregation Trans-Lasso
+  t0 <- Sys.time()
+  prop.re1 <- Trans.lasso(X, y, n.vec, I.til = 1:5, l1 = T)
+  prop.re2 <- Trans.lasso(X, y, n.vec, I.til = 6:n.vec[1], l1=T)
+  beta.hat_t.trans[s,] <- (prop.re1$beta.hat + prop.re2$beta.hat) / 2
+  T.trans[s] <- Sys.time()-t0
+
+  ### Q-aggregation with a different R.hat
+  prop.sp.re1 <- Trans.lasso.sp(X, y, n.vec, I.til = 1:15, l1 = T)
+  prop.sp.re2 <- Trans.lasso.sp(X, y, n.vec, I.til = 16:n.vec[1], l1=T)
+  beta.hat_t.trans.sp[s,] <- (prop.sp.re1$beta.sp + prop.sp.re2$beta.sp) / 2
+
+  ### ATL
+  # initial SCAD estimator
+  beta.tilde_t <- coef(cv.ncvreg(X_t, Y_t, intercept = FALSE, nfolds = 5, penalty=c("SCAD")))[-1]
+
+  fold = 3
+  delta.hat_t.adp.fold <- matrix(NA, nrow = fold, ncol = p)
+  beta.hat_t.ind.fold <- matrix(NA, nrow = fold, ncol = p)
+  beta.hat_t.adp.fold <- matrix(NA, nrow = fold, ncol = p)
+  for (k in 1:fold) {
+    selector <- rep(1:fold, length.out = n_s)
+    X_s.train <- X_s[selector==k,]
+    X_s.test <- X_s[selector!=k,]
+    Y_s.train <- Y_s[selector==k]
+    Y_s.test <- Y_s[selector!=k]
+
+    n_s.train <- length(Y_s.train)
+    n_s.test <- length(Y_s.test)
+
+    beta.tilde_s.train <- coef(cv.ncvreg(X_s.train, Y_s.train, intercept = FALSE, nfolds = 5, penalty=c("SCAD")))[-1]
+    beta.tilde_s.test <- coef(cv.ncvreg(X_s.test, Y_s.test, intercept = FALSE, nfolds = 5, penalty=c("SCAD")))[-1]
+
+    # simultaneous estimation
+    lasso.fit_s.train <- cv.glmnet(X_s.train, Y_s.train, intercept = FALSE, nfolds = 5,
+                                   penalty.factor = 1/beta.tilde_s.train)
+    beta.hat_s.train <- coef(lasso.fit_s.train)[-1,]
+
+    # hard threshold adaptive weighting
+    indicator <- c(rep(0.01,1),rep(1,p-1))
+    lasso.fit_t.ind <- cv.glmnet(X_t, Y_t - X_t%*%beta.hat_s.train, intercept = FALSE, nfolds = 5,
+                                 penalty.factor = indicator)
+    delta.hat.ind <- coef(lasso.fit_t.ind)[-1,]
+    beta.hat_t.ind.fold[k,] <- beta.hat_s.train + delta.hat.ind
+
+    # smooth adaptive weighting
+    t1 <- Sys.time()
+    weighting <- (1 / abs(beta.tilde_t-beta.tilde_s.test))^gamma
+    lasso.fit_t.adp <- cv.glmnet(X_t, Y_t - X_t%*%beta.hat_s.train, intercept = FALSE, nfolds = 5,
+                                 penalty.factor = weighting)
+    delta.hat_t.adp.fold[k,] <- delta.hat.adp <- coef(lasso.fit_t.adp)[-1,]
+    beta.hat_t.adp.fold[k,] <- beta.hat_s.train + delta.hat.adp
+    T.adp[s] <- Sys.time()-t1
+  }
+
+  beta.hat_t.ind[s,] <- colMeans(beta.hat_t.ind.fold)
+
+  delta.hat_t.adp[s,] <- colMeans(delta.hat_t.adp.fold)
+  beta.hat_t.adp[s,] <- colMeans(beta.hat_t.adp.fold)
+}
+
+maxdiff.hat <- c(max(colMeans(delta.hat_t.adp)[1:q]), max(colMeans(delta.hat_t.adp)[-c(1:q)]))
+
+RMSE_nontrans <- error.hat(beta_t, beta.hat_t.non)[[1]]
+RMSE_naivetrans <- error.hat(beta_t, beta.hat_t)[[1]]
+RMSE_Qtrans <- error.hat(beta_t, beta.hat_t.trans)[[1]]
+RMSE_Qtrans.sp <- error.hat(beta_t, beta.hat_t.trans.sp)[[1]]
+RMSE_indicator <- error.hat(beta_t, beta.hat_t.ind)[[1]]
+RMSE_adaptive <- error.hat(beta_t, beta.hat_t.adp)[[1]]
+
+boxplot(RMSE_nontrans, RMSE_naivetrans, RMSE_Qtrans.sp,
+        RMSE_indicator, RMSE_adaptive,
+        names = c('Non-Trans',
+                  'Oracle Trans-Lasso', 'Trans-Lasso',
+                  'H-ATL', 'S-ATL'),
+        ylab = 'RMSE')
+
+# RMSE
+cbind(c('Non-Trans','Oracle Trans-Lasso','Trans-Lasso','Trans-Lasso.sp','H-ATL','S-ATL'),
+      c(rbind(mean(RMSE_nontrans), mean(RMSE_naivetrans), mean(RMSE_Qtrans, na.rm=T), mean(RMSE_Qtrans.sp, na.rm=T), mean(RMSE_indicator), mean(RMSE_adaptive))))
+
+# computation time
+cbind(c('Trans-Lasso','S-ATL'),rbind(mean(T.trans), mean(T.adp)))
+
+# ATL detection consistency
+cbind(c('Non-similar part','Similar part'), maxdiff.hat)
+```
+
+
+## Numerical experiment
+
+### Positivity for knowledge transfer
+By restricts $h$, we formulate an ideal case for knowledge transfer. Sample sizes $(n_0,n_1) \in \{(20,100),(25,200),(30,600),(35,2000),(40,8000)\}$. Calibrate target and source with the same sparsity structure of degree $s/p\in\{0.01,0.025,0.05,0.1,0.25\}$, where $p\in\{20,50,100,200,500\}$, combined with $h=0.01$ under $\|\delta\|_0=1$ in the specified parameter space. For tuning, set $\gamma_0=0.05,\gamma_1=0.5$ and $\lambda$'s are chosen through cross-validation.
+
+Let $w_j= 1/\kappa+I\{j\in \mathcal{A}\}$, with a shrinking factor of $1/\kappa$ in upper bound, the follwing figure compares ATL with Oracle Trans-Lasso and Trans-Lasso on Root Mean Square Error (RMSE) ratio over non-transferred Lasso estimation under 100 simulations, illustrating effective knowledge transfer by all non-negative rates, different levels of sparsity dependence with Oracle Trans-Lasso and Trans-Lasso being the sensitive ones.
+
+Let $w_j=1/|\tilde{\delta_j}|^{\gamma}$, ATL with smooth weighting is also contained. By typically comparing with ATL that has known weights, smooth weighting achieves parallelled performance in practice.
+
+![Positive Rate for Oracle Trans-Lasso, Trans-Lasso, ATL and ATL with Smooth Weighting under $h=0.01$ and Various Sparsity Level](Rplot-positivity.png)
+
+### Consistency and double robustness
+Relaxing $\|\delta\|_1\leq h\in\{0.01,0.1,1,10,100\}$ with $\|\delta\|_0=1$ still, we calibrate $w_j$ in ATL, which obtains almost idential rate with Oracle Trans-Lasso according to the first row of the following figure, demonstrating its nearly optimal limiting performance for small $h$. From the second row in the following figure, Oracle Trans-Lasso and Trans-Lasso, show a clear shift from below to exceed the red dashed boundary of Non-Trans Lasso when $h$ increases, behaving again sensitive for negative sources.
+ATL with smooth weighting again shows its comparable performance with ATL under known weights.
+
+![Estimation Error for Non-Trans Lasso, Oracle Trans-Lasso, Trans-Lasso, ATL and ATL with Smooth Weighting under Fixed $s/p=0.01$ but Different Dissimilarity Level](Rplot-robustness.png)
+
+### Computational efficiency
+Through embedding transferability within the learning process, ATL shrinks the computation burden compared with Trans-Lasso and appears insensitive for enlarging $n_0,n_K$ and $p$.
+
+![Computation Time for Trans-Lasso and ATL under Various Dimensions](Rplot-efficiency.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
